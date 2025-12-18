@@ -1,18 +1,29 @@
 package com.quizbattle.service;
 
 import com.quizbattle.model.*;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class GameService {
     
     private final Map<String, Room> rooms = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
+    private SimpMessagingTemplate messagingTemplate;
+    
+    // Инжектим через setter, чтобы избежать циклической зависимости
+    public void setMessagingTemplate(SimpMessagingTemplate messagingTemplate) {
+        this.messagingTemplate = messagingTemplate;
+    }
     
     // Список доступных аватаров (эмодзи)
     public static final String[] AVATARS = {
@@ -113,9 +124,9 @@ public class GameService {
     }
     
     /**
-     * Зарегистрировать нажатие кнопки
+     * Зарегистрировать нажатие кнопки с clientTimestamp
      */
-    public ButtonPress pressButton(String roomCode, String playerId) {
+    public ButtonPress pressButton(String roomCode, String playerId, long clientTimestamp) {
         Room room = getRoom(roomCode);
         if (room == null || room.getGameState() != GameState.ACTIVE) {
             return null;
@@ -126,7 +137,53 @@ public class GameService {
             return null;
         }
         
-        return room.registerButtonPress(playerId);
+        // Регистрируем нажатие
+        boolean isFirstPress = room.registerButtonPress(playerId, clientTimestamp);
+        
+        if (isFirstPress) {
+            // Это первое нажатие - запускаем таймер для определения победителя
+            long bufferWindow = room.calculateBufferWindow();
+            
+            room.setWinnerDeterminationTask(
+                scheduler.schedule(() -> {
+                    synchronized (room) {
+                        room.determineWinner();
+                        // Уведомляем всех о результате
+                        notifyRoomState(roomCode);
+                    }
+                }, bufferWindow, TimeUnit.MILLISECONDS)
+            );
+        }
+        
+        // Возвращаем последнее нажатие
+        var presses = room.getButtonPresses();
+        if (!presses.isEmpty()) {
+            return presses.get(presses.size() - 1);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Уведомить всех в комнате об изменении состояния
+     */
+    private void notifyRoomState(String roomCode) {
+        if (messagingTemplate == null) {
+            return;
+        }
+        
+        Room room = getRoom(roomCode);
+        if (room == null) {
+            return;
+        }
+        
+        GameMessage message = GameMessage.roundEnded(room);
+        if (message != null) {
+            messagingTemplate.convertAndSend(
+                "/topic/room/" + roomCode,
+                message
+            );
+        }
     }
     
     /**

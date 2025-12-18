@@ -2,8 +2,9 @@ package com.quizbattle.model;
 
 public class ButtonPress {
     private String playerId;
-    private long timestamp;
+    private long timestamp; // clientTimestamp
     private int position;
+    private long serverReceiveTime; // Время получения на сервере
     
     public ButtonPress() {}
     
@@ -21,4 +22,9 @@ public class ButtonPress {
     
     public int getPosition() { return position; }
     public void setPosition(int position) { this.position = position; }
+    
+    public long getServerReceiveTime() { return serverReceiveTime; }
+    public void setServerReceiveTime(long serverReceiveTime) { 
+        this.serverReceiveTime = serverReceiveTime; 
+    }
 }

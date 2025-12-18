@@ -23,6 +23,8 @@ public class GameController {
     public GameController(GameService gameService, SimpMessagingTemplate messagingTemplate) {
         this.gameService = gameService;
         this.messagingTemplate = messagingTemplate;
+        // Передаем messagingTemplate в GameService для уведомлений
+        gameService.setMessagingTemplate(messagingTemplate);
     }
     
     /**
@@ -170,11 +172,23 @@ public class GameController {
      * Нажатие кнопки игроком
      */
     @MessageMapping("/press-button")
-    public void pressButton(@Payload Map<String, String> payload) {
-        String roomCode = payload.get("roomCode");
-        String playerId = payload.get("playerId");
+    public void pressButton(@Payload Map<String, Object> payload) {
+        String roomCode = (String) payload.get("roomCode");
+        String playerId = (String) payload.get("playerId");
         
-        ButtonPress press = gameService.pressButton(roomCode, playerId);
+        // Получаем clientTimestamp (может быть Long или String)
+        long clientTimestamp;
+        Object timestampObj = payload.get("clientTimestamp");
+        if (timestampObj instanceof Number) {
+            clientTimestamp = ((Number) timestampObj).longValue();
+        } else if (timestampObj instanceof String) {
+            clientTimestamp = Long.parseLong((String) timestampObj);
+        } else {
+            // Fallback: используем текущее время сервера
+            clientTimestamp = System.currentTimeMillis();
+        }
+        
+        ButtonPress press = gameService.pressButton(roomCode, playerId, clientTimestamp);
         if (press == null) {
             return; // Игнорируем невалидные нажатия
         }
@@ -182,13 +196,22 @@ public class GameController {
         Room room = gameService.getRoom(roomCode);
         Player player = room.getPlayerById(playerId);
         
-        log.info("Button pressed by: {} in room: {}, position: {}", 
-            player.getName(), roomCode, press.getPosition());
+        log.info("Button pressed by: {} in room: {}, clientTime: {}, serverTime: {}", 
+            player.getName(), roomCode, clientTimestamp, System.currentTimeMillis());
         
+        // Отправляем промежуточное обновление (нажатие зарегистрировано, но победитель еще не определен)
         messagingTemplate.convertAndSend(
             "/topic/room/" + roomCode,
             GameMessage.buttonPressed(room, player, press)
         );
+        
+        // Если раунд завершен (победитель определен), отправляем финальное сообщение
+        if (room.getGameState() == GameState.ROUND_ENDED && room.getWinnerId() != null) {
+            messagingTemplate.convertAndSend(
+                "/topic/room/" + roomCode,
+                GameMessage.roundEnded(room)
+            );
+        }
     }
     
     /**

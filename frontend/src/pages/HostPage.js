@@ -48,6 +48,16 @@ function HostPage() {
           });
         }
         break;
+      case 'ROUND_ENDED':
+        setGameState('ROUND_ENDED');
+        if (message.winnerId) {
+          setWinner({
+            id: message.winnerId,
+            name: message.winnerName,
+            avatar: message.winnerAvatar
+          });
+        }
+        break;
       case 'ROUND_RESET':
         setGameState('WAITING');
         setWinner(null);

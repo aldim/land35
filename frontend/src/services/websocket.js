@@ -121,7 +121,12 @@ class WebSocketService {
   }
 
   pressButton(roomCode, playerId) {
-    this.send('/app/press-button', { roomCode, playerId });
+    const clientTimestamp = Date.now(); // Фиксируем время нажатия на клиенте
+    this.send('/app/press-button', { 
+      roomCode, 
+      playerId,
+      clientTimestamp  // Добавляем timestamp клиента
+    });
   }
 
   resetRound(roomCode) {

@@ -115,6 +115,25 @@ public class GameMessage {
         return msg;
     }
     
+    public static GameMessage roundEnded(Room room) {
+        GameMessage msg = new GameMessage();
+        msg.setType(MessageType.ROUND_ENDED);
+        msg.setRoomCode(room.getCode());
+        msg.setGameState(room.getGameState());
+        msg.setButtonPresses(room.getButtonPresses());
+        
+        if (room.getWinnerId() != null) {
+            Player winner = room.getPlayerById(room.getWinnerId());
+            if (winner != null) {
+                msg.setWinnerId(winner.getId());
+                msg.setWinnerName(winner.getName());
+                msg.setWinnerAvatar(winner.getAvatar());
+            }
+        }
+        
+        return msg;
+    }
+    
     public static GameMessage roundReset(Room room) {
         GameMessage msg = new GameMessage();
         msg.setType(MessageType.ROUND_RESET);

@@ -54,6 +54,18 @@ function PlayerPage() {
           setHasPressed(true);
         }
         break;
+      case 'ROUND_ENDED':
+        setGameState('ROUND_ENDED');
+        if (message.winnerId) {
+          setWinnerId(message.winnerId);
+          setIsWinner(message.winnerId === playerId);
+        }
+        // Проверяем, нажимал ли этот игрок
+        const myPressEnded = message.buttonPresses?.find(p => p.playerId === playerId);
+        if (myPressEnded) {
+          setHasPressed(true);
+        }
+        break;
       case 'ROUND_RESET':
         setGameState('WAITING');
         setIsWinner(false);

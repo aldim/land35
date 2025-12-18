@@ -7,6 +7,7 @@ public enum MessageType {
     PLAYER_LEFT,
     ROUND_STARTED,
     BUTTON_PRESSED,
+    ROUND_ENDED,
     ROUND_RESET,
     ROOM_STATE,
     ERROR,
