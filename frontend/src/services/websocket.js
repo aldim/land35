@@ -2,14 +2,27 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
 // Динамически определяем URL WebSocket сервера на основе текущего хоста
+// Это позволяет работать как с localhost, так и с IP адресами в локальной сети
 const getWebSocketUrl = () => {
   const host = window.location.hostname;
   const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
   // Бэкенд работает на порту 8080
-  return `${protocol}//${host}:8080/ws`;
+  const wsUrl = `${protocol}//${host}:8080/ws`;
+  console.log('WebSocket URL:', wsUrl);
+  return wsUrl;
 };
 
-const SOCKET_URL = process.env.REACT_APP_WS_URL || getWebSocketUrl();
+// Используем переменную окружения только если она явно задана, иначе используем динамическое определение
+// Это важно для работы с разных устройств (localhost, IP адреса в локальной сети)
+const getSocketUrl = () => {
+  const envUrl = process.env.REACT_APP_WS_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
+    return envUrl;
+  }
+  return getWebSocketUrl();
+};
+
+const SOCKET_URL = getSocketUrl();
 
 class WebSocketService {
   constructor() {
