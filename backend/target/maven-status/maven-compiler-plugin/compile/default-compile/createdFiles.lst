@@ -1,0 +1,14 @@
+com\quizbattle\config\WebSocketHandshakeHandler.class
+com\quizbattle\model\Room.class
+com\quizbattle\model\GameState.class
+com\quizbattle\model\GameMessage.class
+com\quizbattle\service\GameService.class
+com\quizbattle\config\CorsConfig.class
+com\quizbattle\config\WebSocketConfig.class
+com\quizbattle\controller\GameController.class
+com\quizbattle\model\MessageType.class
+com\quizbattle\model\Player.class
+com\quizbattle\QuizBattleApplication.class
+com\quizbattle\config\StompPrincipal.class
+com\quizbattle\model\ButtonPress.class
+com\quizbattle\controller\RestController.class
