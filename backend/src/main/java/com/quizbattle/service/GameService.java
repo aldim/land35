@@ -73,16 +73,21 @@ public class GameService {
     
     /**
      * Загрузить всех пользователей из БД как игроков в комнату (только игроков, не админов)
+     * Использует команду пользователя из БД (teamId берется из user.getTeam().getId())
      */
     private void loadAllUsersAsPlayers(Room room) {
         List<User> users = userService.getAllUsers();
+        final int MAX_PLAYERS = 20; // Максимальное количество игроков
+        
+        int playerIndex = 0;
+        
         for (User user : users) {
             // Пропускаем администраторов - они не могут быть игроками
             if (user.isAdmin()) {
                 continue;
             }
             
-            if (room.getPlayers().size() >= Room.MAX_PLAYERS) {
+            if (playerIndex >= MAX_PLAYERS) {
                 break; // Прерываем, если достигнут лимит
             }
             
@@ -92,8 +97,15 @@ public class GameService {
                     ? user.getAvatar()
                     : "👤"; // Аватар по умолчанию
             
-            Player player = new Player(playerId, name, avatar);
+            // Берем teamId из команды пользователя (если есть)
+            Integer teamId = null;
+            if (user.getTeam() != null) {
+                teamId = user.getTeam().getId().intValue();
+            }
+            
+            Player player = new Player(playerId, name, avatar, teamId);
             room.addPlayer(player);
+            playerIndex++;
         }
     }
     

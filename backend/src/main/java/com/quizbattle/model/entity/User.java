@@ -30,6 +30,10 @@ public class User {
     @Column(name = "role", length = 20)
     private UserRole role = UserRole.PLAYER; // По умолчанию игрок
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team; // Команда игрока
+    
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
@@ -114,6 +118,14 @@ public class User {
     
     public void setRole(UserRole role) {
         this.role = role;
+    }
+    
+    public Team getTeam() {
+        return team;
+    }
+    
+    public void setTeam(Team team) {
+        this.team = team;
     }
     
     public boolean isAdmin() {

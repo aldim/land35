@@ -3,9 +3,11 @@ package com.quizbattle.config;
 import com.quizbattle.model.entity.User;
 import com.quizbattle.model.entity.UserRole;
 import com.quizbattle.model.entity.RoomEntity;
+import com.quizbattle.model.entity.Team;
 import com.quizbattle.repository.UserRepository;
 import com.quizbattle.repository.RoomRepository;
 import com.quizbattle.repository.RoomInvitationRepository;
+import com.quizbattle.repository.TeamRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -28,6 +30,9 @@ public class DataLoader {
     
     @Autowired
     private RoomInvitationRepository roomInvitationRepository;
+    
+    @Autowired
+    private TeamRepository teamRepository;
     
     // Маппинг имен файлов на полные имена
     private static final Map<String, String> FULL_NAMES = new HashMap<>();
@@ -58,6 +63,9 @@ public class DataLoader {
             // Удаляем пользователя master35, если он существует
             removeMaster35User();
             
+            // Создаем команды
+            createTeams();
+            
             // Обновляем существующих пользователей - устанавливаем роль PLAYER если не установлена
             updateExistingUsersRoles();
             
@@ -78,6 +86,9 @@ public class DataLoader {
                     createUserFromResource(resource);
                 }
             }
+            
+            // Связываем пользователей с командами
+            assignUsersToTeams();
             
             System.out.println("Данные пользователей успешно загружены из каталога avatars");
         } catch (IOException e) {
@@ -195,6 +206,103 @@ public class DataLoader {
         } catch (Exception e) {
             System.err.println("Ошибка при создании пользователя из ресурса " + resource.getFilename() + ": " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Создать команды в базе данных
+     */
+    private void createTeams() {
+        try {
+            // Команда 1: Ведьмачий ковеант
+            createTeamIfNotExists("Ведьмачий ковеант", null);
+            
+            // Команда 2: Тифлинги
+            createTeamIfNotExists("Тифлинги", null);
+            
+            // Команда 3: Орда Братва
+            createTeamIfNotExists("Орда Братва", null);
+            
+            // Команда 4: Лесной союз
+            createTeamIfNotExists("Лесной союз", null);
+            
+            System.out.println("Команды успешно созданы/обновлены");
+        } catch (Exception e) {
+            System.err.println("Ошибка при создании команд: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Создать команду, если она не существует
+     */
+    private void createTeamIfNotExists(String teamName, String backgroundImage) {
+        var existingTeam = teamRepository.findByName(teamName);
+        if (existingTeam.isEmpty()) {
+            Team team = new Team(teamName, backgroundImage);
+            teamRepository.save(team);
+            System.out.println("Создана команда: " + teamName);
+        }
+    }
+    
+    /**
+     * Привязать пользователей к командам согласно распределению
+     */
+    private void assignUsersToTeams() {
+        try {
+            // Получаем команды
+            Team team1 = teamRepository.findByName("Ведьмачий ковеант")
+                    .orElseThrow(() -> new IllegalStateException("Команда 'Ведьмачий ковеант' не найдена"));
+            Team team2 = teamRepository.findByName("Тифлинги")
+                    .orElseThrow(() -> new IllegalStateException("Команда 'Тифлинги' не найдена"));
+            Team team3 = teamRepository.findByName("Орда Братва")
+                    .orElseThrow(() -> new IllegalStateException("Команда 'Орда Братва' не найдена"));
+            Team team4 = teamRepository.findByName("Лесной союз")
+                    .orElseThrow(() -> new IllegalStateException("Команда 'Лесной союз' не найдена"));
+            
+            // Команда 1: Ведьмачий ковеант - kate, leonid, lena, arina
+            assignUserToTeam("kate", team1);
+            assignUserToTeam("leonid", team1);
+            assignUserToTeam("lena", team1);
+            assignUserToTeam("arina", team1);
+            
+            // Команда 2: Тифлинги - anna, tor, vladimir, eugen
+            assignUserToTeam("anna", team2);
+            assignUserToTeam("tor", team2);
+            assignUserToTeam("vladimir", team2);
+            assignUserToTeam("eugen", team2);
+            
+            // Команда 3: Орда Братва - di, nata, sid, pavel
+            assignUserToTeam("di", team3);
+            assignUserToTeam("nata", team3);
+            assignUserToTeam("sid", team3);
+            assignUserToTeam("pavel", team3);
+            
+            // Команда 4: Лесной союз - shadow, ivan, nina, marin
+            assignUserToTeam("shadow", team4);
+            assignUserToTeam("ivan", team4);
+            assignUserToTeam("nina", team4);
+            assignUserToTeam("marin", team4);
+            
+            System.out.println("Пользователи успешно привязаны к командам");
+        } catch (Exception e) {
+            System.err.println("Ошибка при привязке пользователей к командам: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Привязать пользователя к команде
+     */
+    private void assignUserToTeam(String username, Team team) {
+        var userOpt = userRepository.findByUsername(username);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            user.setTeam(team);
+            userRepository.save(user);
+            System.out.println("Пользователь " + username + " привязан к команде " + team.getName());
+        } else {
+            System.out.println("Пользователь " + username + " не найден, пропускаем привязку к команде");
         }
     }
     

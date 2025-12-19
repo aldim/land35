@@ -6,6 +6,7 @@ public class Player {
     private String avatar;
     private String sessionId;
     private boolean connected;
+    private Integer teamId; // Номер команды (1-4)
     
     public Player() {}
     
@@ -13,6 +14,14 @@ public class Player {
         this.id = id;
         this.name = name;
         this.avatar = avatar;
+        this.connected = false;
+    }
+    
+    public Player(String id, String name, String avatar, Integer teamId) {
+        this.id = id;
+        this.name = name;
+        this.avatar = avatar;
+        this.teamId = teamId;
         this.connected = false;
     }
     
@@ -38,4 +47,7 @@ public class Player {
     
     public boolean isConnected() { return connected; }
     public void setConnected(boolean connected) { this.connected = connected; }
+    
+    public Integer getTeamId() { return teamId; }
+    public void setTeamId(Integer teamId) { this.teamId = teamId; }
 }
