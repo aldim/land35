@@ -243,10 +243,33 @@ function ScreenPage() {
         </div>
       )}
 
-      {/* Room Code Display */}
-      <div className="text-center mb-4" style={{ position: 'relative', zIndex: 1001 }}>
-        <p className="mb-1" style={{ color: 'var(--text-muted)' }}>Комната:</p>
-        <div className="room-code">{roomCode}</div>
+      {/* Room Code Display - Bottom of screen, transparent */}
+      <div 
+        className="text-center" 
+        style={{ 
+          position: 'fixed',
+          bottom: '2rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1001,
+          width: 'auto',
+          maxWidth: '300px'
+        }}
+      >
+        <p className="mb-1" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Комната:</p>
+        <div 
+          className="room-code" 
+          style={{
+            background: 'transparent',
+            border: 'none',
+            padding: '0.5rem 1rem',
+            fontSize: '2rem',
+            display: 'inline-block',
+            width: 'auto'
+          }}
+        >
+          {roomCode}
+        </div>
       </div>
 
       {/* Winner Display */}
@@ -276,7 +299,7 @@ function ScreenPage() {
             padding: '0.75rem 1.5rem',
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
             color: 'var(--text)',
-            fontSize: '1.2rem',
+            fontSize: '3.6rem',
             fontWeight: 'bold'
           }}>
             {chapterNames[currentChapter] || `Глава ${currentChapter}`}, Часть {currentPart}
@@ -348,7 +371,7 @@ function ScreenPage() {
                           backdropFilter: 'blur(2px)'
                         }}
                       >
-                        <AvatarDisplay avatar={player.avatar} size="6rem" />
+                        <AvatarDisplay avatar={player.avatar} size="12rem" />
                       </div>
                     );
                   })}
