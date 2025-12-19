@@ -28,7 +28,7 @@ function HomePage() {
             <AvatarDisplay avatar={localStorage.getItem('userAvatar')} size="2rem" />
             <div>
               <div style={{ fontWeight: '600' }}>
-                {localStorage.getItem('userNickname') || localStorage.getItem('userFullName')}
+                {localStorage.getItem('userFullName')}
               </div>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 {isAdmin ? '👑 Администратор' : '👤 Игрок'}

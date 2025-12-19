@@ -1,18 +1,5 @@
 import React, { useState } from 'react';
-
-// Динамически определяем URL API на основе текущего хоста
-const getApiUrl = () => {
-  const envUrl = process.env.REACT_APP_API_URL;
-  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
-    return envUrl;
-  }
-  // В Docker контейнере используем имя сервиса, иначе localhost
-  const host = window.location.hostname;
-  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-  // Если фронтенд на порту 3000, бэкенд на 8080
-  // Если фронтенд на порту 80 (nginx), бэкенд на 8080
-  return `${protocol}//${host}:8080`;
-};
+import { getApiUrl } from '../utils/api';
 
 // Функция для отображения аватара (изображение или эмодзи)
 const AvatarDisplay = ({ avatar, size = '2.5rem' }) => {

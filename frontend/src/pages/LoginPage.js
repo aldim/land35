@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AvatarDisplay from '../components/AvatarDisplay';
+import { getApiUrl } from '../utils/api';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const API_URL = getApiUrl();
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -71,7 +72,6 @@ function LoginPage() {
         localStorage.setItem('userId', data.id);
         localStorage.setItem('username', data.username);
         localStorage.setItem('userFullName', data.fullName);
-        localStorage.setItem('userNickname', data.nickname || data.fullName);
         localStorage.setItem('userAvatar', data.avatar || '👤');
         localStorage.setItem('userRole', data.role || 'PLAYER');
         
@@ -213,7 +213,7 @@ function LoginPage() {
                     textAlign: 'center',
                     wordBreak: 'break-word'
                   }}>
-                    {user.nickname || user.fullName}
+                    {user.fullName}
                   </div>
                   {isAdmin && (
                     <div style={{ 

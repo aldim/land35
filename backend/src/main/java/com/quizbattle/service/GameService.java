@@ -87,9 +87,7 @@ public class GameService {
             }
             
             String playerId = user.getId().toString();
-            String name = user.getNickname() != null && !user.getNickname().isEmpty() 
-                    ? user.getNickname() 
-                    : user.getFullName();
+            String name = user.getFullName(); // Используем полное имя вместо никнейма
             String avatar = user.getAvatar() != null && !user.getAvatar().isEmpty()
                     ? user.getAvatar()
                     : "👤"; // Аватар по умолчанию

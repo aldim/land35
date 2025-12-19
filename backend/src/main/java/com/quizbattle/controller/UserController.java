@@ -128,9 +128,7 @@ public class UserController {
             
             // Добавляем игрока в комнату
             var user = invitation.getInvitedUser();
-            String playerName = user.getNickname() != null && !user.getNickname().isEmpty()
-                    ? user.getNickname()
-                    : user.getFullName();
+            String playerName = user.getFullName(); // Используем полное имя вместо никнейма
             gameService.addPlayer(
                     invitation.getRoom().getCode(),
                     playerName,

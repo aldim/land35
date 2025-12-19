@@ -12,7 +12,7 @@ function JoinRoomPage() {
   useEffect(() => {
     // Проверяем, вошел ли пользователь
     const storedUserId = localStorage.getItem('userId');
-    const storedUserName = localStorage.getItem('userNickname') || localStorage.getItem('userFullName');
+    const storedUserName = localStorage.getItem('userFullName');
     
     if (!storedUserId) {
       // Если не вошел, перенаправляем на страницу входа
