@@ -15,6 +15,8 @@ public class GameMessage {
     private String winnerAvatar;
     private List<ButtonPress> buttonPresses;
     private String error;
+    private Integer chapter; // Текущая глава викторины
+    private Integer part; // Текущая часть главы
     
     public GameMessage() {}
     
@@ -54,6 +56,12 @@ public class GameMessage {
     
     public String getError() { return error; }
     public void setError(String error) { this.error = error; }
+    
+    public Integer getChapter() { return chapter; }
+    public void setChapter(Integer chapter) { this.chapter = chapter; }
+    
+    public Integer getPart() { return part; }
+    public void setPart(Integer part) { this.part = part; }
     
     // Factory methods
     public static GameMessage roomCreated(String roomCode) {
@@ -150,6 +158,8 @@ public class GameMessage {
         msg.setGameState(room.getGameState());
         msg.setPlayers(room.getPlayers());
         msg.setButtonPresses(room.getButtonPresses());
+        msg.setChapter(room.getCurrentChapter());
+        msg.setPart(room.getCurrentPart());
         
         if (room.getWinnerId() != null) {
             Player winner = room.getPlayerById(room.getWinnerId());
@@ -167,6 +177,15 @@ public class GameMessage {
         GameMessage msg = new GameMessage();
         msg.setType(MessageType.ERROR);
         msg.setError(errorMessage);
+        return msg;
+    }
+    
+    public static GameMessage chapterUpdated(Room room) {
+        GameMessage msg = new GameMessage();
+        msg.setType(MessageType.CHAPTER_UPDATED);
+        msg.setRoomCode(room.getCode());
+        msg.setChapter(room.getCurrentChapter());
+        msg.setPart(room.getCurrentPart());
         return msg;
     }
 }

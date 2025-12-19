@@ -154,6 +154,10 @@ class WebSocketService {
     this.send('/app/stun-player', { roomCode, playerId });
   }
 
+  updateChapter(roomCode, chapter, part) {
+    this.send('/app/update-chapter', { roomCode, chapter, part });
+  }
+
   onConnect(callback) {
     this.onConnectCallbacks.push(callback);
   }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import websocketService from '../services/websocket';
 import AvatarDisplay from '../components/AvatarDisplay';
+import { getApiUrl } from '../utils/api';
 
 function HostPage() {
   const navigate = useNavigate();
@@ -12,6 +13,9 @@ function HostPage() {
   const [winner, setWinner] = useState(null);
   const [error, setError] = useState(null);
   const [openMenuPlayerId, setOpenMenuPlayerId] = useState(null);
+  const [currentChapter, setCurrentChapter] = useState(null);
+  const [currentPart, setCurrentPart] = useState(null);
+  const [chapterNames, setChapterNames] = useState({});
 
   const handleMessage = useCallback((message) => {
     console.log('Received message:', message);
@@ -66,6 +70,20 @@ function HostPage() {
             avatar: message.winnerAvatar
           });
         }
+        if (message.chapter !== undefined) {
+          setCurrentChapter(message.chapter);
+        }
+        if (message.part !== undefined) {
+          setCurrentPart(message.part);
+        }
+        break;
+      case 'CHAPTER_UPDATED':
+        if (message.chapter !== undefined) {
+          setCurrentChapter(message.chapter);
+        }
+        if (message.part !== undefined) {
+          setCurrentPart(message.part);
+        }
         break;
       case 'ERROR':
         setError(message.error);
@@ -74,6 +92,23 @@ function HostPage() {
       default:
         break;
     }
+  }, []);
+
+  // Загружаем названия глав с бэкенда
+  useEffect(() => {
+    const loadChapterNames = async () => {
+      try {
+        const response = await fetch(`${getApiUrl()}/api/chapters/names`);
+        if (response.ok) {
+          const data = await response.json();
+          setChapterNames(data.chapters || {});
+        }
+      } catch (err) {
+        console.error('Error loading chapter names:', err);
+      }
+    };
+    
+    loadChapterNames();
   }, []);
 
   useEffect(() => {
@@ -142,6 +177,12 @@ function HostPage() {
 
   const handleResetRound = () => {
     websocketService.resetRound(roomCode);
+  };
+
+  const handleUpdateChapter = (chapter, part) => {
+    if (roomCode) {
+      websocketService.updateChapter(roomCode, chapter, part);
+    }
   };
 
   const handleStunPlayer = (playerId) => {
@@ -287,6 +328,44 @@ function HostPage() {
         >
           🔄 Новый вопрос
         </button>
+      </div>
+
+      {/* Chapter Control Panel */}
+      <div className="card mb-2">
+        <h2 className="mb-2" style={{ fontSize: '1.2rem' }}>Текущая глава викторины</h2>
+        <div className="mb-2">
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+            Текущее положение: {currentChapter !== null && currentPart !== null 
+              ? `${chapterNames[currentChapter] || `Глава ${currentChapter}`}, Часть ${currentPart}` 
+              : 'Не установлено'}
+          </p>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          {/* Кнопки для глав 1-4 */}
+          {[1, 2, 3, 4].map(chapter => (
+            <div key={chapter} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', maxWidth: '200px' }}>
+                {chapterNames[chapter] || `Глава ${chapter}`}
+              </div>
+              <div style={{ display: 'flex', gap: '0.25rem' }}>
+                {[1, 2, 3, 4, 5].map(part => (
+                  <button
+                    key={part}
+                    className={`btn ${currentChapter === chapter && currentPart === part ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => handleUpdateChapter(chapter, part)}
+                    style={{ 
+                      padding: '0.5rem 0.75rem',
+                      fontSize: '0.9rem',
+                      minWidth: '2.5rem'
+                    }}
+                  >
+                    {part}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Players List by Teams */}

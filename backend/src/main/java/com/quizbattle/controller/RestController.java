@@ -57,6 +57,8 @@ public class RestController {
         response.put("winnerId", roomState.getWinnerId() != null ? roomState.getWinnerId() : "");
         response.put("winnerName", roomState.getWinnerName() != null ? roomState.getWinnerName() : "");
         response.put("winnerAvatar", roomState.getWinnerAvatar() != null ? roomState.getWinnerAvatar() : "");
+        response.put("chapter", roomState.getChapter());
+        response.put("part", roomState.getPart());
         
         return ResponseEntity.ok(response);
     }
@@ -67,6 +69,19 @@ public class RestController {
     @GetMapping("/avatars")
     public ResponseEntity<?> getAvatars() {
         return ResponseEntity.ok(Map.of("avatars", gameService.getAvailableAvatars()));
+    }
+    
+    /**
+     * Получить названия глав викторины
+     */
+    @GetMapping("/chapters/names")
+    public ResponseEntity<?> getChapterNames() {
+        Map<Integer, String> chapterNames = new HashMap<>();
+        chapterNames.put(1, "Таможня «Граница Выходного Дня»");
+        chapterNames.put(2, "Кабак «Последняя Пятница»");
+        chapterNames.put(3, "Опенспейсные Топи");
+        chapterNames.put(4, "Цитадель Вечного Обременения");
+        return ResponseEntity.ok(Map.of("chapters", chapterNames));
     }
     
     /**

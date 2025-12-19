@@ -14,6 +14,8 @@ public class Room {
     private List<ButtonPress> buttonPresses;
     private ScheduledFuture<?> winnerDeterminationTask; // Для буферизации
     private long firstPressServerTime; // Время получения первого нажатия на сервере
+    private Integer currentChapter; // Текущая глава викторины
+    private Integer currentPart; // Текущая часть главы
     
     public static final int MAX_PLAYERS = 20;
     private static final long MIN_BUFFER_WINDOW = 100; // Минимальное окно 100мс
@@ -66,6 +68,12 @@ public class Room {
     public void setFirstPressServerTime(long firstPressServerTime) {
         this.firstPressServerTime = firstPressServerTime;
     }
+    
+    public Integer getCurrentChapter() { return currentChapter; }
+    public void setCurrentChapter(Integer currentChapter) { this.currentChapter = currentChapter; }
+    
+    public Integer getCurrentPart() { return currentPart; }
+    public void setCurrentPart(Integer currentPart) { this.currentPart = currentPart; }
     
     // Business methods
     public boolean addPlayer(Player player) {

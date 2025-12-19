@@ -393,6 +393,20 @@ public class GameService {
     }
     
     /**
+     * Обновить текущую главу и часть викторины
+     */
+    public boolean updateChapter(String roomCode, Integer chapter, Integer part, String sessionId) {
+        Room room = getRoom(roomCode);
+        if (room == null || !room.getHostSessionId().equals(sessionId)) {
+            return false; // Только хост может обновлять главу
+        }
+        
+        room.setCurrentChapter(chapter);
+        room.setCurrentPart(part);
+        return true;
+    }
+    
+    /**
      * Генерация 4-значного кода комнаты (проверяет и в памяти, и в БД)
      */
     private String generateRoomCode() {

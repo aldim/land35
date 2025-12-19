@@ -10,6 +10,7 @@ public enum MessageType {
     ROUND_ENDED,
     ROUND_RESET,
     ROOM_STATE,
+    CHAPTER_UPDATED,
     ERROR,
     
     // От клиента

@@ -298,6 +298,67 @@ public class GameController {
         );
     }
     
+    /**
+     * Обновить текущую главу и часть викторины
+     */
+    @MessageMapping("/update-chapter")
+    public void updateChapter(@Payload Map<String, Object> payload, Principal principal) {
+        String sessionId = principal.getName();
+        String roomCode = (String) payload.get("roomCode");
+        
+        // Получаем chapter и part (могут быть Integer или String)
+        Integer chapter = null;
+        Integer part = null;
+        
+        Object chapterObj = payload.get("chapter");
+        if (chapterObj != null) {
+            if (chapterObj instanceof Number) {
+                chapter = ((Number) chapterObj).intValue();
+            } else if (chapterObj instanceof String) {
+                try {
+                    chapter = Integer.parseInt((String) chapterObj);
+                } catch (NumberFormatException e) {
+                    sendError(sessionId, "Неверный формат chapter");
+                    return;
+                }
+            }
+        }
+        
+        Object partObj = payload.get("part");
+        if (partObj != null) {
+            if (partObj instanceof Number) {
+                part = ((Number) partObj).intValue();
+            } else if (partObj instanceof String) {
+                try {
+                    part = Integer.parseInt((String) partObj);
+                } catch (NumberFormatException e) {
+                    sendError(sessionId, "Неверный формат part");
+                    return;
+                }
+            }
+        }
+        
+        if (!gameService.isHost(roomCode, sessionId)) {
+            sendError(sessionId, "Только хост комнаты может обновлять главу");
+            return;
+        }
+        
+        boolean success = gameService.updateChapter(roomCode, chapter, part, sessionId);
+        if (!success) {
+            sendError(sessionId, "Не удалось обновить главу");
+            return;
+        }
+        
+        Room room = gameService.getRoom(roomCode);
+        log.info("Chapter updated: chapter={}, part={} in room: {}", chapter, part, roomCode);
+        
+        // Отправляем обновление главы всем участникам
+        messagingTemplate.convertAndSend(
+            "/topic/room/" + roomCode,
+            GameMessage.chapterUpdated(room)
+        );
+    }
+    
     private void sendError(String sessionId, String message) {
         messagingTemplate.convertAndSendToUser(
             sessionId,

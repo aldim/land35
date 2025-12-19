@@ -11,6 +11,9 @@ function ScreenPage() {
   const [gameState, setGameState] = useState('WAITING');
   const [winner, setWinner] = useState(null);
   const [error, setError] = useState(null);
+  const [currentChapter, setCurrentChapter] = useState(null);
+  const [currentPart, setCurrentPart] = useState(null);
+  const [chapterNames, setChapterNames] = useState({});
 
   const handleMessage = useCallback((message) => {
     console.log('Screen received message:', message);
@@ -63,6 +66,20 @@ function ScreenPage() {
             avatar: message.winnerAvatar
           });
         }
+        if (message.chapter !== undefined) {
+          setCurrentChapter(message.chapter);
+        }
+        if (message.part !== undefined) {
+          setCurrentPart(message.part);
+        }
+        break;
+      case 'CHAPTER_UPDATED':
+        if (message.chapter !== undefined) {
+          setCurrentChapter(message.chapter);
+        }
+        if (message.part !== undefined) {
+          setCurrentPart(message.part);
+        }
         break;
       case 'ERROR':
         setError(message.error);
@@ -71,6 +88,23 @@ function ScreenPage() {
       default:
         break;
     }
+  }, []);
+
+  // Загружаем названия глав с бэкенда
+  useEffect(() => {
+    const loadChapterNames = async () => {
+      try {
+        const response = await fetch(`${getApiUrl()}/api/chapters/names`);
+        if (response.ok) {
+          const data = await response.json();
+          setChapterNames(data.chapters || {});
+        }
+      } catch (err) {
+        console.error('Error loading chapter names:', err);
+      }
+    };
+    
+    loadChapterNames();
   }, []);
 
   useEffect(() => {
@@ -145,6 +179,18 @@ function ScreenPage() {
   // Получаем команды в порядке: 1, 2, 3, 4 (для размещения по углам)
   const orderedTeams = [1, 2, 3, 4].filter(id => teams[id]).map(id => ({ id, players: teams[id] }));
 
+  // Получаем путь к картинке главы
+  const getChapterImagePath = () => {
+    if (currentChapter !== null && currentPart !== null) {
+      // Используем API URL для получения изображения из ресурсов бэкенда
+      const apiUrl = getApiUrl();
+      return `${apiUrl}/api/chapters/${currentChapter}-${currentPart}.jpg`;
+    }
+    return null;
+  };
+
+  const chapterImagePath = getChapterImagePath();
+
   if (!connected) {
     return (
       <div className="page flex items-center justify-center">
@@ -157,22 +203,55 @@ function ScreenPage() {
   }
 
   return (
-    <div className="page">
+    <div className="page" style={{ position: 'relative', overflow: 'hidden' }}>
       {error && (
         <div className="card mb-3" style={{ background: 'rgba(255, 51, 102, 0.2)', borderColor: 'var(--secondary)' }}>
           {error}
         </div>
       )}
 
+      {/* Chapter Image - Full Screen Center Overlay */}
+      {chapterImagePath && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          pointerEvents: 'none',
+          backgroundColor: 'rgba(0, 0, 0, 0.3)' // Полупрозрачный фон для лучшей видимости
+        }}>
+          <img 
+            src={chapterImagePath}
+            alt={`Глава ${currentChapter}, Часть ${currentPart}`}
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              objectFit: 'contain',
+              borderRadius: '8px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+            }}
+            onError={(e) => {
+              console.error('Failed to load chapter image:', chapterImagePath);
+              e.target.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
       {/* Room Code Display */}
-      <div className="text-center mb-4">
+      <div className="text-center mb-4" style={{ position: 'relative', zIndex: 1001 }}>
         <p className="mb-1" style={{ color: 'var(--text-muted)' }}>Комната:</p>
         <div className="room-code">{roomCode}</div>
       </div>
 
       {/* Winner Display */}
       {winner && gameState === 'ROUND_ENDED' && (
-        <div className="winner-display card mb-4">
+        <div className="winner-display card mb-4" style={{ position: 'relative', zIndex: 1001 }}>
           <div className="winner-avatar">
             <AvatarDisplay avatar={winner.avatar} size="16rem" />
           </div>
@@ -181,7 +260,7 @@ function ScreenPage() {
       )}
 
       {/* Game State */}
-      <div className="text-center mb-4">
+      <div className="text-center mb-4" style={{ position: 'relative', zIndex: 1001 }}>
         <span className={`game-state ${gameState.toLowerCase()}`}>
           {gameState === 'WAITING' && '⏳ Ожидание'}
           {gameState === 'ACTIVE' && '🔥 Раунд активен!'}
@@ -189,61 +268,96 @@ function ScreenPage() {
         </span>
       </div>
 
-      {/* Players List by Teams */}
-      <div className="card">
-        <h2 className="mb-3">Игроки ({players.length}/20)</h2>
-        
-        {players.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">👥</div>
-            <p>Пока нет игроков</p>
-            <p>Ожидание подключения игроков...</p>
+      {/* Current Chapter Display */}
+      {currentChapter !== null && currentPart !== null && (
+        <div className="text-center mb-4" style={{ position: 'relative', zIndex: 1001 }}>
+          <div className="card" style={{ 
+            display: 'inline-block', 
+            padding: '0.75rem 1.5rem',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            color: 'var(--text)',
+            fontSize: '1.2rem',
+            fontWeight: 'bold'
+          }}>
+            {chapterNames[currentChapter] || `Глава ${currentChapter}`}, Часть {currentPart}
           </div>
-        ) : (
-          <div className="teams-corners">
-            {orderedTeams.map(({ id, players: teamPlayers }, index) => {
-              // Определяем позицию команды по углам: 0-верх-левый, 1-верх-правый, 2-низ-левый, 3-низ-правый
-              const cornerClass = index === 0 ? 'corner-top-left' : 
-                                  index === 1 ? 'corner-top-right' : 
-                                  index === 2 ? 'corner-bottom-left' : 
-                                  'corner-bottom-right';
-              
-              return (
-                <div key={id} className={`team-corner ${cornerClass}`}>
-                  <h3 className="team-name">{teamNames[id] || `Команда ${id}`}</h3>
-                  <div className="team-players">
-                    {teamPlayers.map(player => {
-                      // Определяем цвет рамки: темно-фиолетовый для оглушенных, зеленый для подключенных, серый для отключенных
-                      let borderColor = '#888'; // По умолчанию серый (не подключен)
-                      if (player.stunned) {
-                        borderColor = '#6a0dad'; // Темно-фиолетовый для оглушенных
-                      } else if (player.connected) {
-                        borderColor = '#00ff88'; // Зеленый для подключенных
-                      }
-                      
-                      return (
-                        <div 
-                          key={player.id} 
-                          className="player-avatar-wrapper"
-                          style={{
-                            border: `4px solid ${borderColor}`,
-                            borderRadius: '50%',
-                            padding: '4px',
-                            display: 'inline-block',
-                            margin: '0.75rem'
-                          }}
-                        >
-                          <AvatarDisplay avatar={player.avatar} size="6rem" />
-                        </div>
-                      );
-                    })}
-                  </div>
+        </div>
+      )}
+
+      {/* Players List by Teams - Full Screen Transparent Overlay */}
+      {players.length > 0 && (
+        <div 
+          className="teams-corners" 
+          style={{ 
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1001,
+            pointerEvents: 'none',
+            padding: '2rem'
+          }}
+        >
+          {orderedTeams.map(({ id, players: teamPlayers }, index) => {
+            // Определяем позицию команды по углам: 0-верх-левый, 1-верх-правый, 2-низ-левый, 3-низ-правый
+            const cornerClass = index === 0 ? 'corner-top-left' : 
+                                index === 1 ? 'corner-top-right' : 
+                                index === 2 ? 'corner-bottom-left' : 
+                                'corner-bottom-right';
+            
+            return (
+              <div key={id} className={`team-corner ${cornerClass}`}>
+                <h3 
+                  className="team-name" 
+                  style={{ 
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                    backdropFilter: 'blur(4px)'
+                  }}
+                >
+                  {teamNames[id] || `Команда ${id}`}
+                </h3>
+                <div 
+                  className="team-players"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '0.5rem'
+                  }}
+                >
+                  {teamPlayers.map(player => {
+                    // Определяем цвет рамки: темно-фиолетовый для оглушенных, зеленый для подключенных, серый для отключенных
+                    let borderColor = '#888'; // По умолчанию серый (не подключен)
+                    if (player.stunned) {
+                      borderColor = '#6a0dad'; // Темно-фиолетовый для оглушенных
+                    } else if (player.connected) {
+                      borderColor = '#00ff88'; // Зеленый для подключенных
+                    }
+                    
+                    return (
+                      <div 
+                        key={player.id} 
+                        className="player-avatar-wrapper"
+                        style={{
+                          border: `4px solid ${borderColor}`,
+                          borderRadius: '50%',
+                          padding: '4px',
+                          display: 'inline-block',
+                          margin: '0.75rem',
+                          backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                          backdropFilter: 'blur(2px)'
+                        }}
+                      >
+                        <AvatarDisplay avatar={player.avatar} size="6rem" />
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
     </div>
   );
