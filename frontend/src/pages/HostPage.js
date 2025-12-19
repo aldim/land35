@@ -139,13 +139,31 @@ function HostPage() {
     websocketService.resetRound(roomCode);
   };
 
-  const getPlayerUrl = (player) => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/play/${roomCode}/${player.id}`;
+  // Группируем игроков по командам
+  const groupPlayersByTeam = () => {
+    const teams = {};
+    players.forEach(player => {
+      const teamId = player.teamId || 0; // Если teamId отсутствует, считаем как команда 0
+      if (!teams[teamId]) {
+        teams[teamId] = [];
+      }
+      teams[teamId].push(player);
+    });
+    return teams;
   };
 
-  const copyPlayerUrl = (player) => {
-    navigator.clipboard.writeText(getPlayerUrl(player));
+  const teams = groupPlayersByTeam();
+  // Разделяем команды на левый и правый столбцы
+  // Левый: команды 1 и 3, Правый: команды 2 и 4
+  const leftColumnTeams = [1, 3].filter(id => teams[id]).map(id => ({ id, players: teams[id] }));
+  const rightColumnTeams = [2, 4].filter(id => teams[id]).map(id => ({ id, players: teams[id] }));
+  
+  // Названия команд
+  const teamNames = {
+    1: 'Ведьмачий ковеант',
+    2: 'Тифлинги',
+    3: 'Орда Братва',
+    4: 'Лесной союз'
   };
 
   if (!connected) {
@@ -225,7 +243,7 @@ function HostPage() {
         </button>
       </div>
 
-      {/* Players List */}
+      {/* Players List by Teams */}
       <div className="card">
         <h2 className="mb-3">Игроки ({players.length}/20)</h2>
         
@@ -236,27 +254,58 @@ function HostPage() {
             <p>Игроки загружаются автоматически из базы данных</p>
           </div>
         ) : (
-          <div className="players-list">
-            {players.map(player => (
-              <div key={player.id} className="player-card">
-                <div className="player-avatar">
-                  <AvatarDisplay avatar={player.avatar} size="2.5rem" />
-                </div>
-                <div>
-                  <div className="player-name">{player.name}</div>
-                  <div className={`player-status ${player.connected ? 'connected' : ''}`}>
-                    {player.connected ? '🟢 Онлайн' : '⚪ Не подключён'}
+          <div className="teams-container">
+            {/* Левый столбец */}
+            <div className="teams-column">
+              {leftColumnTeams.map(({ id, players: teamPlayers }) => (
+                <div key={id} className="team-group">
+                  <h3 className="team-name">{teamNames[id] || `Команда ${id}`}</h3>
+                  <div className="team-players">
+                    {teamPlayers.map(player => (
+                      <div 
+                        key={player.id} 
+                        className="player-avatar-wrapper"
+                        style={{
+                          border: `3px solid ${player.connected ? '#00ff88' : '#888'}`,
+                          borderRadius: '50%',
+                          padding: '3px',
+                          display: 'inline-block',
+                          margin: '0.5rem'
+                        }}
+                      >
+                        <AvatarDisplay avatar={player.avatar} size="3rem" />
+                      </div>
+                    ))}
                   </div>
-                  <button 
-                    className="btn btn-secondary mt-1"
-                    style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem' }}
-                    onClick={() => copyPlayerUrl(player)}
-                  >
-                    📋 Копировать ссылку
-                  </button>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            
+            {/* Правый столбец */}
+            <div className="teams-column">
+              {rightColumnTeams.map(({ id, players: teamPlayers }) => (
+                <div key={id} className="team-group">
+                  <h3 className="team-name">{teamNames[id] || `Команда ${id}`}</h3>
+                  <div className="team-players">
+                    {teamPlayers.map(player => (
+                      <div 
+                        key={player.id} 
+                        className="player-avatar-wrapper"
+                        style={{
+                          border: `3px solid ${player.connected ? '#00ff88' : '#888'}`,
+                          borderRadius: '50%',
+                          padding: '3px',
+                          display: 'inline-block',
+                          margin: '0.5rem'
+                        }}
+                      >
+                        <AvatarDisplay avatar={player.avatar} size="3rem" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

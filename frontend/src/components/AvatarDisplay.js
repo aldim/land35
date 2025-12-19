@@ -27,7 +27,6 @@ const AvatarDisplay = ({ avatar, size = '2.5rem' }) => {
           height: `${sizePx}px`, 
           borderRadius: '50%', 
           objectFit: 'cover',
-          border: '2px solid var(--card-border)',
           display: 'block'
         }}
         onError={() => {
