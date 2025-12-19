@@ -153,10 +153,6 @@ function HostPage() {
   };
 
   const teams = groupPlayersByTeam();
-  // Разделяем команды на левый и правый столбцы
-  // Левый: команды 1 и 3, Правый: команды 2 и 4
-  const leftColumnTeams = [1, 3].filter(id => teams[id]).map(id => ({ id, players: teams[id] }));
-  const rightColumnTeams = [2, 4].filter(id => teams[id]).map(id => ({ id, players: teams[id] }));
   
   // Названия команд
   const teamNames = {
@@ -165,6 +161,9 @@ function HostPage() {
     3: 'Орда Братва',
     4: 'Лесной союз'
   };
+  
+  // Получаем команды в порядке: 1, 2, 3, 4 (для размещения по углам)
+  const orderedTeams = [1, 2, 3, 4].filter(id => teams[id]).map(id => ({ id, players: teams[id] }));
 
   if (!connected) {
     return (
@@ -208,9 +207,8 @@ function HostPage() {
       {/* Winner Display */}
       {winner && gameState === 'ROUND_ENDED' && (
         <div className="winner-display card mb-4">
-          <div className="winner-label">🎉 Первый нажал!</div>
           <div className="winner-avatar">
-            <AvatarDisplay avatar={winner.avatar} size="8rem" />
+            <AvatarDisplay avatar={winner.avatar} size="16rem" />
           </div>
           <div className="winner-name">{winner.name}</div>
         </div>
@@ -254,11 +252,16 @@ function HostPage() {
             <p>Игроки загружаются автоматически из базы данных</p>
           </div>
         ) : (
-          <div className="teams-container">
-            {/* Левый столбец */}
-            <div className="teams-column">
-              {leftColumnTeams.map(({ id, players: teamPlayers }) => (
-                <div key={id} className="team-group">
+          <div className="teams-corners">
+            {orderedTeams.map(({ id, players: teamPlayers }, index) => {
+              // Определяем позицию команды по углам: 0-верх-левый, 1-верх-правый, 2-низ-левый, 3-низ-правый
+              const cornerClass = index === 0 ? 'corner-top-left' : 
+                                  index === 1 ? 'corner-top-right' : 
+                                  index === 2 ? 'corner-bottom-left' : 
+                                  'corner-bottom-right';
+              
+              return (
+                <div key={id} className={`team-corner ${cornerClass}`}>
                   <h3 className="team-name">{teamNames[id] || `Команда ${id}`}</h3>
                   <div className="team-players">
                     {teamPlayers.map(player => (
@@ -266,46 +269,20 @@ function HostPage() {
                         key={player.id} 
                         className="player-avatar-wrapper"
                         style={{
-                          border: `3px solid ${player.connected ? '#00ff88' : '#888'}`,
+                          border: `4px solid ${player.connected ? '#00ff88' : '#888'}`,
                           borderRadius: '50%',
-                          padding: '3px',
+                          padding: '4px',
                           display: 'inline-block',
-                          margin: '0.5rem'
+                          margin: '0.75rem'
                         }}
                       >
-                        <AvatarDisplay avatar={player.avatar} size="3rem" />
+                        <AvatarDisplay avatar={player.avatar} size="6rem" />
                       </div>
                     ))}
                   </div>
                 </div>
-              ))}
-            </div>
-            
-            {/* Правый столбец */}
-            <div className="teams-column">
-              {rightColumnTeams.map(({ id, players: teamPlayers }) => (
-                <div key={id} className="team-group">
-                  <h3 className="team-name">{teamNames[id] || `Команда ${id}`}</h3>
-                  <div className="team-players">
-                    {teamPlayers.map(player => (
-                      <div 
-                        key={player.id} 
-                        className="player-avatar-wrapper"
-                        style={{
-                          border: `3px solid ${player.connected ? '#00ff88' : '#888'}`,
-                          borderRadius: '50%',
-                          padding: '3px',
-                          display: 'inline-block',
-                          margin: '0.5rem'
-                        }}
-                      >
-                        <AvatarDisplay avatar={player.avatar} size="3rem" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
       </div>
