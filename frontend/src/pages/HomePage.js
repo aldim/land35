@@ -3,6 +3,15 @@ import { useNavigate } from 'react-router-dom';
 
 function HomePage() {
   const navigate = useNavigate();
+  const userId = localStorage.getItem('userId');
+  const userRole = localStorage.getItem('userRole');
+
+  // ProtectedRoute уже проверил авторизацию, но на всякий случай
+  if (!userId) {
+    return null; // ProtectedRoute сделает редирект
+  }
+
+  const isAdmin = userRole === 'ADMIN';
 
   return (
     <div className="page">
@@ -13,13 +22,49 @@ function HomePage() {
           добавляет игроков, и кто первый нажмёт кнопку — тот и отвечает!
         </p>
         
+        <div className="card mb-3" style={{ maxWidth: '400px', width: '100%' }}>
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: '2rem' }}>
+              {localStorage.getItem('userAvatar') || '👤'}
+            </span>
+            <div>
+              <div style={{ fontWeight: '600' }}>
+                {localStorage.getItem('userNickname') || localStorage.getItem('userFullName')}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                {isAdmin ? '👑 Администратор' : '👤 Игрок'}
+              </div>
+            </div>
+            <button
+              className="btn btn-secondary ml-auto"
+              style={{ padding: '0.3rem 0.8rem', fontSize: '0.85rem' }}
+              onClick={() => {
+                localStorage.clear();
+                navigate('/login');
+              }}
+            >
+              Выйти
+            </button>
+          </div>
+        </div>
+        
         <div className="flex gap-3 mt-4">
-          <button 
-            className="btn btn-primary"
-            onClick={() => navigate('/host')}
-          >
-            🎮 Создать игру
-          </button>
+          {isAdmin && (
+            <button 
+              className="btn btn-primary"
+              onClick={() => navigate('/host')}
+            >
+              🎮 Создать игру
+            </button>
+          )}
+          {!isAdmin && (
+            <button 
+              className="btn btn-primary"
+              onClick={() => navigate('/join')}
+            >
+              👤 Подключиться к игре
+            </button>
+          )}
         </div>
 
         <div className="card mt-4" style={{ maxWidth: '400px' }}>

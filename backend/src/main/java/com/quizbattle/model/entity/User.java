@@ -26,6 +26,10 @@ public class User {
     @Column(name = "avatar", length = 500)
     private String avatar; // URL или путь к аватарке
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", length = 20)
+    private UserRole role = UserRole.PLAYER; // По умолчанию игрок
+    
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
@@ -43,6 +47,16 @@ public class User {
         this.fullName = fullName;
         this.nickname = nickname;
         this.avatar = avatar;
+        this.role = UserRole.PLAYER;
+    }
+    
+    public User(String username, String password, String fullName, String nickname, String avatar, UserRole role) {
+        this.username = username;
+        this.password = password;
+        this.fullName = fullName;
+        this.nickname = nickname;
+        this.avatar = avatar;
+        this.role = role;
     }
     
     // Getters and Setters
@@ -92,6 +106,18 @@ public class User {
     
     public void setAvatar(String avatar) {
         this.avatar = avatar;
+    }
+    
+    public UserRole getRole() {
+        return role;
+    }
+    
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+    
+    public boolean isAdmin() {
+        return role == UserRole.ADMIN;
     }
     
     public LocalDateTime getCreatedAt() {

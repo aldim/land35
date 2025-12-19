@@ -28,14 +28,13 @@ public class GameController {
     }
     
     /**
-     * Создание новой комнаты (от ведущего)
+     * Создание новой комнаты (только для администратора)
      */
     @MessageMapping("/create-room")
     public void createRoom(@Payload Map<String, Object> payload, Principal principal) {
         String sessionId = principal.getName();
         
-        // Получаем userId из payload (может быть Long или String)
-        // userId опционален - если не указан, комната создается только в памяти (гостевой режим)
+        // userId обязателен - комната может быть создана только авторизованным администратором
         Long userId = null;
         Object userIdObj = payload != null ? payload.get("userId") : null;
         if (userIdObj != null) {
@@ -51,17 +50,15 @@ public class GameController {
             }
         }
         
+        if (userId == null) {
+            sendError(sessionId, "Требуется авторизация. Только администратор может создавать комнаты.");
+            return;
+        }
+        
         try {
-            Room room;
-            if (userId != null) {
-                // Создаем комнату с сохранением в БД
-                room = gameService.createRoom(userId, sessionId);
-                log.info("Room created: {} by userId: {}, session: {}", room.getCode(), userId, sessionId);
-            } else {
-                // Создаем комнату только в памяти (гостевой режим для обратной совместимости)
-                room = gameService.createRoomGuest(sessionId);
-                log.info("Room created (guest mode): {} by session: {}", room.getCode(), sessionId);
-            }
+            // Создаем комнату с сохранением в БД (проверка роли внутри)
+            Room room = gameService.createRoom(userId, sessionId);
+            log.info("Room created: {} by userId: {}, session: {}", room.getCode(), userId, sessionId);
             
             // Отправляем код комнаты обратно ведущему
             messagingTemplate.convertAndSendToUser(
@@ -69,63 +66,31 @@ public class GameController {
                 "/queue/personal", 
                 GameMessage.roomCreated(room.getCode())
             );
+            
+            // Отправляем состояние комнаты с игроками
+            messagingTemplate.convertAndSendToUser(
+                sessionId,
+                "/queue/personal",
+                GameMessage.roomState(room)
+            );
         } catch (IllegalArgumentException e) {
             sendError(sessionId, e.getMessage());
         }
     }
     
     /**
-     * Добавление игрока ведущим
+     * Добавление игрока ведущим (ОТКЛЮЧЕНО)
+     * Игроки теперь загружаются автоматически из БД при создании комнаты
      */
     @MessageMapping("/add-player")
     public void addPlayer(@Payload Map<String, Object> payload, Principal principal) {
         String sessionId = principal.getName();
         String roomCode = (String) payload.get("roomCode");
-        String playerName = (String) payload.get("playerName");
-        String avatar = (String) payload.get("avatar");
         
-        // Получаем userId, если указан (может быть Long или String)
-        Long userId = null;
-        Object userIdObj = payload.get("userId");
-        if (userIdObj != null) {
-            if (userIdObj instanceof Number) {
-                userId = ((Number) userIdObj).longValue();
-            } else if (userIdObj instanceof String) {
-                try {
-                    userId = Long.parseLong((String) userIdObj);
-                } catch (NumberFormatException e) {
-                    // Игнорируем, userId остается null
-                }
-            }
-        }
+        log.info("Add player request ignored (auto-loading enabled): roomCode={}", roomCode);
         
-        log.info("Add player request: roomCode={}, playerName={}, avatar={}, userId={}", 
-                roomCode, playerName, avatar, userId);
-        
-        if (roomCode == null || roomCode.isEmpty()) {
-            sendError(sessionId, "Код комнаты не указан");
-            return;
-        }
-        
-        if (!gameService.isHost(roomCode, sessionId)) {
-            sendError(sessionId, "Только ведущий может добавлять игроков");
-            return;
-        }
-        
-        Player player = gameService.addPlayer(roomCode, playerName, avatar, userId);
-        if (player == null) {
-            sendError(sessionId, "Не удалось добавить игрока. Возможно, комната заполнена.");
-            return;
-        }
-        
-        Room room = gameService.getRoom(roomCode);
-        log.info("Player added: {} ({}) to room: {}", player.getName(), player.getId(), roomCode);
-        
-        // Уведомляем всех в комнате о новом игроке
-        messagingTemplate.convertAndSend(
-            "/topic/room/" + roomCode, 
-            GameMessage.playerJoined(room, player)
-        );
+        // Отправляем сообщение о том, что функционал отключен
+        sendError(sessionId, "Ручное добавление игроков отключено. Все игроки загружаются автоматически из базы данных.");
     }
     
     /**
@@ -166,7 +131,8 @@ public class GameController {
     }
     
     /**
-     * Удаление игрока ведущим
+     * Удаление игрока ведущим (ОТКЛЮЧЕНО)
+     * Игроки загружаются из БД и не могут быть удалены вручную
      */
     @MessageMapping("/remove-player")
     public void removePlayer(@Payload Map<String, String> payload, Principal principal) {
@@ -174,21 +140,10 @@ public class GameController {
         String roomCode = payload.get("roomCode");
         String playerId = payload.get("playerId");
         
-        if (!gameService.isHost(roomCode, sessionId)) {
-            sendError(sessionId, "Только ведущий может удалять игроков");
-            return;
-        }
+        log.info("Remove player request ignored (auto-loading enabled): roomCode={}, playerId={}", roomCode, playerId);
         
-        Player player = gameService.removePlayer(roomCode, playerId);
-        if (player != null) {
-            Room room = gameService.getRoom(roomCode);
-            log.info("Player removed: {} from room: {}", player.getName(), roomCode);
-            
-            messagingTemplate.convertAndSend(
-                "/topic/room/" + roomCode,
-                GameMessage.playerLeft(room, player)
-            );
-        }
+        // Отправляем сообщение о том, что функционал отключен
+        sendError(sessionId, "Удаление игроков отключено. Все игроки загружаются автоматически из базы данных.");
     }
     
     /**

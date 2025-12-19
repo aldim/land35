@@ -2,12 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import websocketService from '../services/websocket';
 
-const AVATARS = [
-  "🦊", "🐼", "🦁", "🐯", "🐸", "🦉", "🦋", "🐙",
-  "🦄", "🐲", "🦖", "🐳", "🦀", "🐝", "🦜", "🐨",
-  "🐰", "🐻", "🦈", "🐺"
-];
-
 function HostPage() {
   const navigate = useNavigate();
   const [connected, setConnected] = useState(false);
@@ -15,9 +9,6 @@ function HostPage() {
   const [players, setPlayers] = useState([]);
   const [gameState, setGameState] = useState('WAITING');
   const [winner, setWinner] = useState(null);
-  const [showAddPlayer, setShowAddPlayer] = useState(false);
-  const [newPlayerName, setNewPlayerName] = useState('');
-  const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0]);
   const [error, setError] = useState(null);
 
   const handleMessage = useCallback((message) => {
@@ -84,6 +75,21 @@ function HostPage() {
   }, []);
 
   useEffect(() => {
+    // Проверяем авторизацию
+    const userId = localStorage.getItem('userId');
+    const userRole = localStorage.getItem('userRole');
+    
+    if (!userId) {
+      navigate('/login');
+      return;
+    }
+    
+    if (userRole !== 'ADMIN') {
+      setError('Только администратор может создавать комнаты');
+      setTimeout(() => navigate('/'), 3000);
+      return;
+    }
+    
     const connect = async () => {
       try {
         await websocketService.connect();
@@ -98,9 +104,9 @@ function HostPage() {
         // Небольшая задержка чтобы подписка успела установиться
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Создаём комнату
+        // Создаём комнату с userId
         console.log('Creating room...');
-        websocketService.createRoom();
+        websocketService.createRoom(userId);
       } catch (err) {
         console.error('Connection error:', err);
         setError('Не удалось подключиться к серверу');
@@ -112,7 +118,7 @@ function HostPage() {
     return () => {
       websocketService.disconnect();
     };
-  }, [handleMessage]);
+  }, [handleMessage, navigate]);
 
   useEffect(() => {
     if (roomCode) {
@@ -121,19 +127,8 @@ function HostPage() {
     }
   }, [roomCode, handleMessage]);
 
-  const handleAddPlayer = () => {
-    if (!newPlayerName.trim() || !roomCode) return;
-    
-    console.log('Adding player to room:', roomCode, newPlayerName.trim(), selectedAvatar);
-    websocketService.addPlayer(roomCode, newPlayerName.trim(), selectedAvatar);
-    setNewPlayerName('');
-    setSelectedAvatar(AVATARS[Math.floor(Math.random() * AVATARS.length)]);
-    setShowAddPlayer(false);
-  };
-
-  const handleRemovePlayer = (playerId) => {
-    websocketService.removePlayer(roomCode, playerId);
-  };
+  // Функционал ручного добавления/удаления игроков отключен
+  // Все игроки загружаются автоматически из базы данных
 
   const handleStartRound = () => {
     websocketService.startRound(roomCode);
@@ -225,12 +220,6 @@ function HostPage() {
         >
           🔄 Новый вопрос
         </button>
-        <button 
-          className="btn btn-secondary"
-          onClick={() => setShowAddPlayer(true)}
-        >
-          ➕ Добавить игрока
-        </button>
       </div>
 
       {/* Players List */}
@@ -241,7 +230,7 @@ function HostPage() {
           <div className="empty-state">
             <div className="empty-state-icon">👥</div>
             <p>Пока нет игроков</p>
-            <p>Нажмите "Добавить игрока" чтобы начать</p>
+            <p>Игроки загружаются автоматически из базы данных</p>
           </div>
         ) : (
           <div className="players-list">
@@ -261,75 +250,12 @@ function HostPage() {
                     📋 Копировать ссылку
                   </button>
                 </div>
-                <button 
-                  className="btn-remove"
-                  onClick={() => handleRemovePlayer(player.id)}
-                  title="Удалить игрока"
-                >
-                  ✕
-                </button>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Add Player Modal */}
-      {showAddPlayer && (
-        <div className="modal-overlay" onClick={() => setShowAddPlayer(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2>Добавить игрока</h2>
-            {!roomCode && (
-              <div style={{ color: 'var(--warning)', marginBottom: '1rem', fontSize: '0.9rem' }}>
-                ⏳ Ожидание создания комнаты...
-              </div>
-            )}
-            <div className="form-group">
-              <label>Имя игрока</label>
-              <input 
-                type="text"
-                className="input w-full"
-                placeholder="Введите имя..."
-                value={newPlayerName}
-                onChange={e => setNewPlayerName(e.target.value)}
-                onKeyPress={e => e.key === 'Enter' && handleAddPlayer()}
-                autoFocus
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Аватар</label>
-              <div className="avatar-grid">
-                {AVATARS.map(avatar => (
-                  <button
-                    key={avatar}
-                    className={`avatar-option ${selectedAvatar === avatar ? 'selected' : ''}`}
-                    onClick={() => setSelectedAvatar(avatar)}
-                  >
-                    {avatar}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-2 mt-3">
-              <button 
-                className="btn btn-primary flex-1"
-                onClick={handleAddPlayer}
-                disabled={!newPlayerName.trim() || !roomCode}
-              >
-                {!roomCode ? 'Ожидание комнаты...' : 'Добавить'}
-              </button>
-              <button 
-                className="btn btn-secondary"
-                onClick={() => setShowAddPlayer(false)}
-              >
-                Отмена
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

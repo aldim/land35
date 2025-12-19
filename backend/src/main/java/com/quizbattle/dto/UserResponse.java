@@ -1,6 +1,7 @@
 package com.quizbattle.dto;
 
 import com.quizbattle.model.entity.User;
+import com.quizbattle.model.entity.UserRole;
 
 public class UserResponse {
     private Long id;
@@ -8,6 +9,7 @@ public class UserResponse {
     private String fullName;
     private String nickname;
     private String avatar;
+    private UserRole role;
     
     public UserResponse() {}
     
@@ -17,6 +19,7 @@ public class UserResponse {
         this.fullName = user.getFullName();
         this.nickname = user.getNickname();
         this.avatar = user.getAvatar();
+        this.role = user.getRole();
     }
     
     public Long getId() {
@@ -57,6 +60,18 @@ public class UserResponse {
     
     public void setAvatar(String avatar) {
         this.avatar = avatar;
+    }
+    
+    public UserRole getRole() {
+        return role;
+    }
+    
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+    
+    public boolean isAdmin() {
+        return role == UserRole.ADMIN;
     }
 }
 

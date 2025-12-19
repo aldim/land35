@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -42,11 +42,18 @@ public class GameService {
     
     /**
      * Создать новую комнату (сохраняет в БД и создает игровую сессию)
+     * Автоматически загружает всех пользователей из БД как игроков
+     * Только администратор может создавать комнаты
      */
     @Transactional
     public Room createRoom(Long hostUserId, String hostSessionId) {
         User hostUser = userService.getUserById(hostUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
+        
+        // Проверяем, что пользователь является администратором
+        if (!hostUser.isAdmin()) {
+            throw new IllegalArgumentException("Только администратор может создавать комнаты");
+        }
         
         String code = generateRoomCode();
         
@@ -56,8 +63,40 @@ public class GameService {
         
         // Создаем Room для игровой сессии
         Room room = new Room(code, hostSessionId);
+        
+        // Автоматически загружаем всех пользователей из БД как игроков (кроме админа)
+        loadAllUsersAsPlayers(room);
+        
         rooms.put(code, room);
         return room;
+    }
+    
+    /**
+     * Загрузить всех пользователей из БД как игроков в комнату (только игроков, не админов)
+     */
+    private void loadAllUsersAsPlayers(Room room) {
+        List<User> users = userService.getAllUsers();
+        for (User user : users) {
+            // Пропускаем администраторов - они не могут быть игроками
+            if (user.isAdmin()) {
+                continue;
+            }
+            
+            if (room.getPlayers().size() >= Room.MAX_PLAYERS) {
+                break; // Прерываем, если достигнут лимит
+            }
+            
+            String playerId = user.getId().toString();
+            String name = user.getNickname() != null && !user.getNickname().isEmpty() 
+                    ? user.getNickname() 
+                    : user.getFullName();
+            String avatar = user.getAvatar() != null && !user.getAvatar().isEmpty()
+                    ? user.getAvatar()
+                    : "👤"; // Аватар по умолчанию
+            
+            Player player = new Player(playerId, name, avatar);
+            room.addPlayer(player);
+        }
     }
     
     /**
@@ -75,7 +114,7 @@ public class GameService {
      * Активировать комнату из БД (для игрока, принявшего приглашение)
      */
     public Room activateRoomFromDatabase(String roomCode, String sessionId) {
-        RoomEntity roomEntity = userService.getRoomByCode(roomCode)
+        userService.getRoomByCode(roomCode)
                 .orElseThrow(() -> new IllegalArgumentException("Комната не найдена"));
         
         // Если комната уже активна в памяти, возвращаем её
@@ -86,6 +125,8 @@ public class GameService {
         
         // Создаем новую игровую сессию для комнаты
         Room room = new Room(roomCode, sessionId);
+        // Загружаем всех пользователей из БД
+        loadAllUsersAsPlayers(room);
         rooms.put(roomCode.toUpperCase(), room);
         return room;
     }
@@ -101,53 +142,20 @@ public class GameService {
     }
     
     /**
-     * Добавить игрока в комнату (вызывается ведущим)
-     * Если userId указан, используем данные из БД, иначе создаем нового игрока
+     * Добавить игрока в комнату (ОТКЛЮЧЕНО - игроки загружаются автоматически из БД)
+     * Оставлено для обратной совместимости, но всегда возвращает null
      */
+    @Deprecated
     public Player addPlayer(String roomCode, String playerName, String avatar, Long userId) {
-        Room room = getRoom(roomCode);
-        if (room == null) {
-            // Пытаемся активировать комнату из БД
-            room = activateRoomFromDatabase(roomCode, null);
-        }
-        
-        if (room.getPlayers().size() >= Room.MAX_PLAYERS) {
-            return null;
-        }
-        
-        // Если userId указан, используем данные пользователя из БД
-        if (userId != null) {
-            User user = userService.getUserById(userId).orElse(null);
-            if (user != null) {
-                String playerId = userId.toString(); // Используем ID пользователя как playerId
-                String name = user.getNickname() != null && !user.getNickname().isEmpty() 
-                        ? user.getNickname() 
-                        : user.getFullName();
-                String userAvatar = user.getAvatar() != null && !user.getAvatar().isEmpty()
-                        ? user.getAvatar()
-                        : avatar;
-                Player player = new Player(playerId, name, userAvatar);
-                if (room.addPlayer(player)) {
-                    return player;
-                }
-                return null;
-            }
-        }
-        
-        // Создаем нового игрока без связи с БД (гость)
-        String playerId = UUID.randomUUID().toString().substring(0, 8);
-        Player player = new Player(playerId, playerName, avatar);
-        
-        if (room.addPlayer(player)) {
-            return player;
-        }
-        
+        // Функционал ручного добавления игроков отключен
+        // Все игроки загружаются автоматически из БД при создании комнаты
         return null;
     }
     
     /**
      * Добавить игрока в комнату (без userId, для обратной совместимости)
      */
+    @Deprecated
     public Player addPlayer(String roomCode, String playerName, String avatar) {
         return addPlayer(roomCode, playerName, avatar, null);
     }

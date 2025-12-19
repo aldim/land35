@@ -56,6 +56,17 @@ public class UserController {
     }
     
     /**
+     * Получить список всех пользователей
+     */
+    @GetMapping
+    public ResponseEntity<?> getAllUsers() {
+        List<UserResponse> users = userService.getAllUsers().stream()
+                .map(UserResponse::new)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(Map.of("users", users));
+    }
+    
+    /**
      * Получить информацию о пользователе
      */
     @GetMapping("/{id}")

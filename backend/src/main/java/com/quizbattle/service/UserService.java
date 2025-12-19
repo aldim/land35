@@ -70,6 +70,13 @@ public class UserService {
     }
     
     /**
+     * Получить всех пользователей
+     */
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+    
+    /**
      * Создать приглашение в комнату
      */
     @Transactional
