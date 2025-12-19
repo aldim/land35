@@ -31,31 +31,76 @@ public class GameController {
      * Создание новой комнаты (от ведущего)
      */
     @MessageMapping("/create-room")
-    public void createRoom(Principal principal) {
+    public void createRoom(@Payload Map<String, Object> payload, Principal principal) {
         String sessionId = principal.getName();
-        Room room = gameService.createRoom(sessionId);
         
-        log.info("Room created: {} by session: {}", room.getCode(), sessionId);
+        // Получаем userId из payload (может быть Long или String)
+        // userId опционален - если не указан, комната создается только в памяти (гостевой режим)
+        Long userId = null;
+        Object userIdObj = payload != null ? payload.get("userId") : null;
+        if (userIdObj != null) {
+            if (userIdObj instanceof Number) {
+                userId = ((Number) userIdObj).longValue();
+            } else if (userIdObj instanceof String) {
+                try {
+                    userId = Long.parseLong((String) userIdObj);
+                } catch (NumberFormatException e) {
+                    sendError(sessionId, "Неверный формат userId");
+                    return;
+                }
+            }
+        }
         
-        // Отправляем код комнаты обратно ведущему
-        messagingTemplate.convertAndSendToUser(
-            sessionId, 
-            "/queue/personal", 
-            GameMessage.roomCreated(room.getCode())
-        );
+        try {
+            Room room;
+            if (userId != null) {
+                // Создаем комнату с сохранением в БД
+                room = gameService.createRoom(userId, sessionId);
+                log.info("Room created: {} by userId: {}, session: {}", room.getCode(), userId, sessionId);
+            } else {
+                // Создаем комнату только в памяти (гостевой режим для обратной совместимости)
+                room = gameService.createRoomGuest(sessionId);
+                log.info("Room created (guest mode): {} by session: {}", room.getCode(), sessionId);
+            }
+            
+            // Отправляем код комнаты обратно ведущему
+            messagingTemplate.convertAndSendToUser(
+                sessionId, 
+                "/queue/personal", 
+                GameMessage.roomCreated(room.getCode())
+            );
+        } catch (IllegalArgumentException e) {
+            sendError(sessionId, e.getMessage());
+        }
     }
     
     /**
      * Добавление игрока ведущим
      */
     @MessageMapping("/add-player")
-    public void addPlayer(@Payload Map<String, String> payload, Principal principal) {
+    public void addPlayer(@Payload Map<String, Object> payload, Principal principal) {
         String sessionId = principal.getName();
-        String roomCode = payload.get("roomCode");
-        String playerName = payload.get("playerName");
-        String avatar = payload.get("avatar");
+        String roomCode = (String) payload.get("roomCode");
+        String playerName = (String) payload.get("playerName");
+        String avatar = (String) payload.get("avatar");
         
-        log.info("Add player request: roomCode={}, playerName={}, avatar={}", roomCode, playerName, avatar);
+        // Получаем userId, если указан (может быть Long или String)
+        Long userId = null;
+        Object userIdObj = payload.get("userId");
+        if (userIdObj != null) {
+            if (userIdObj instanceof Number) {
+                userId = ((Number) userIdObj).longValue();
+            } else if (userIdObj instanceof String) {
+                try {
+                    userId = Long.parseLong((String) userIdObj);
+                } catch (NumberFormatException e) {
+                    // Игнорируем, userId остается null
+                }
+            }
+        }
+        
+        log.info("Add player request: roomCode={}, playerName={}, avatar={}, userId={}", 
+                roomCode, playerName, avatar, userId);
         
         if (roomCode == null || roomCode.isEmpty()) {
             sendError(sessionId, "Код комнаты не указан");
@@ -67,7 +112,7 @@ public class GameController {
             return;
         }
         
-        Player player = gameService.addPlayer(roomCode, playerName, avatar);
+        Player player = gameService.addPlayer(roomCode, playerName, avatar, userId);
         if (player == null) {
             sendError(sessionId, "Не удалось добавить игрока. Возможно, комната заполнена.");
             return;

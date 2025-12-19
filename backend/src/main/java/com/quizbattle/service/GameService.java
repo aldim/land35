@@ -1,8 +1,11 @@
 package com.quizbattle.service;
 
 import com.quizbattle.model.*;
+import com.quizbattle.model.entity.RoomEntity;
+import com.quizbattle.model.entity.User;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.Map;
@@ -18,7 +21,12 @@ public class GameService {
     private final Map<String, Room> rooms = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
+    private final UserService userService;
     private SimpMessagingTemplate messagingTemplate;
+    
+    public GameService(UserService userService) {
+        this.userService = userService;
+    }
     
     // Инжектим через setter, чтобы избежать циклической зависимости
     public void setMessagingTemplate(SimpMessagingTemplate messagingTemplate) {
@@ -33,12 +41,52 @@ public class GameService {
     };
     
     /**
-     * Создать новую комнату
+     * Создать новую комнату (сохраняет в БД и создает игровую сессию)
      */
-    public Room createRoom(String hostSessionId) {
+    @Transactional
+    public Room createRoom(Long hostUserId, String hostSessionId) {
+        User hostUser = userService.getUserById(hostUserId)
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
+        
+        String code = generateRoomCode();
+        
+        // Создаем RoomEntity и сохраняем в БД
+        RoomEntity roomEntity = new RoomEntity(code, hostUser);
+        userService.saveRoom(roomEntity);
+        
+        // Создаем Room для игровой сессии
+        Room room = new Room(code, hostSessionId);
+        rooms.put(code, room);
+        return room;
+    }
+    
+    /**
+     * Создать комнату в гостевом режиме (только в памяти, без сохранения в БД)
+     * Для обратной совместимости со старым фронтендом
+     */
+    public Room createRoomGuest(String hostSessionId) {
         String code = generateRoomCode();
         Room room = new Room(code, hostSessionId);
         rooms.put(code, room);
+        return room;
+    }
+    
+    /**
+     * Активировать комнату из БД (для игрока, принявшего приглашение)
+     */
+    public Room activateRoomFromDatabase(String roomCode, String sessionId) {
+        RoomEntity roomEntity = userService.getRoomByCode(roomCode)
+                .orElseThrow(() -> new IllegalArgumentException("Комната не найдена"));
+        
+        // Если комната уже активна в памяти, возвращаем её
+        Room existingRoom = rooms.get(roomCode.toUpperCase());
+        if (existingRoom != null) {
+            return existingRoom;
+        }
+        
+        // Создаем новую игровую сессию для комнаты
+        Room room = new Room(roomCode, sessionId);
+        rooms.put(roomCode.toUpperCase(), room);
         return room;
     }
     
@@ -54,17 +102,39 @@ public class GameService {
     
     /**
      * Добавить игрока в комнату (вызывается ведущим)
+     * Если userId указан, используем данные из БД, иначе создаем нового игрока
      */
-    public Player addPlayer(String roomCode, String playerName, String avatar) {
+    public Player addPlayer(String roomCode, String playerName, String avatar, Long userId) {
         Room room = getRoom(roomCode);
         if (room == null) {
-            return null;
+            // Пытаемся активировать комнату из БД
+            room = activateRoomFromDatabase(roomCode, null);
         }
         
         if (room.getPlayers().size() >= Room.MAX_PLAYERS) {
             return null;
         }
         
+        // Если userId указан, используем данные пользователя из БД
+        if (userId != null) {
+            User user = userService.getUserById(userId).orElse(null);
+            if (user != null) {
+                String playerId = userId.toString(); // Используем ID пользователя как playerId
+                String name = user.getNickname() != null && !user.getNickname().isEmpty() 
+                        ? user.getNickname() 
+                        : user.getFullName();
+                String userAvatar = user.getAvatar() != null && !user.getAvatar().isEmpty()
+                        ? user.getAvatar()
+                        : avatar;
+                Player player = new Player(playerId, name, userAvatar);
+                if (room.addPlayer(player)) {
+                    return player;
+                }
+                return null;
+            }
+        }
+        
+        // Создаем нового игрока без связи с БД (гость)
         String playerId = UUID.randomUUID().toString().substring(0, 8);
         Player player = new Player(playerId, playerName, avatar);
         
@@ -73,6 +143,13 @@ public class GameService {
         }
         
         return null;
+    }
+    
+    /**
+     * Добавить игрока в комнату (без userId, для обратной совместимости)
+     */
+    public Player addPlayer(String roomCode, String playerName, String avatar) {
+        return addPlayer(roomCode, playerName, avatar, null);
     }
     
     /**
@@ -227,7 +304,7 @@ public class GameService {
     }
     
     /**
-     * Генерация 4-значного кода комнаты
+     * Генерация 4-значного кода комнаты (проверяет и в памяти, и в БД)
      */
     private String generateRoomCode() {
         String chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -238,7 +315,8 @@ public class GameService {
             for (int i = 0; i < 4; i++) {
                 code.append(chars.charAt(random.nextInt(chars.length())));
             }
-        } while (rooms.containsKey(code.toString()));
+        } while (rooms.containsKey(code.toString().toUpperCase()) || 
+                 userService.getRoomByCode(code.toString()).isPresent());
         
         return code.toString();
     }
