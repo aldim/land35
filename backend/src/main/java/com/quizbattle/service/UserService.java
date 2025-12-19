@@ -183,5 +183,18 @@ public class UserService {
     public Optional<RoomEntity> getRoomByCode(String code) {
         return roomRepository.findByCode(code);
     }
+    
+    /**
+     * Получить последнюю комнату админа (самую новую)
+     */
+    public Optional<RoomEntity> getLatestRoomByHostUserId(Long hostUserId) {
+        return userRepository.findById(hostUserId)
+                .flatMap(hostUser -> {
+                    List<RoomEntity> rooms = roomRepository.findByHostUser(hostUser);
+                    // Возвращаем самую новую комнату (последнюю по createdAt)
+                    return rooms.stream()
+                            .max((r1, r2) -> r1.getCreatedAt().compareTo(r2.getCreatedAt()));
+                });
+    }
 }
 

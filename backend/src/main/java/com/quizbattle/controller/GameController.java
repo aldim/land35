@@ -55,10 +55,21 @@ public class GameController {
             return;
         }
         
+        // Проверяем параметр forceNew (если true, всегда создает новую комнату)
+        boolean forceNew = false;
+        Object forceNewObj = payload != null ? payload.get("forceNew") : null;
+        if (forceNewObj != null) {
+            if (forceNewObj instanceof Boolean) {
+                forceNew = (Boolean) forceNewObj;
+            } else if (forceNewObj instanceof String) {
+                forceNew = Boolean.parseBoolean((String) forceNewObj);
+            }
+        }
+        
         try {
             // Создаем комнату с сохранением в БД (проверка роли внутри)
-            Room room = gameService.createRoom(userId, sessionId);
-            log.info("Room created: {} by userId: {}, session: {}", room.getCode(), userId, sessionId);
+            Room room = gameService.createRoom(userId, sessionId, forceNew);
+            log.info("Room created: {} by userId: {}, session: {}, forceNew: {}", room.getCode(), userId, sessionId, forceNew);
             
             // Отправляем код комнаты обратно ведущему
             messagingTemplate.convertAndSendToUser(

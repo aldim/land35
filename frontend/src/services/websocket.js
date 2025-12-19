@@ -113,8 +113,8 @@ class WebSocketService {
   }
 
   // Методы для игры
-  createRoom(userId) {
-    this.send('/app/create-room', { userId });
+  createRoom(userId, forceNew = false) {
+    this.send('/app/create-room', { userId, forceNew });
   }
 
   addPlayer(roomCode, playerName, avatar) {

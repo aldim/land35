@@ -3,6 +3,8 @@ package com.quizbattle.service;
 import com.quizbattle.model.*;
 import com.quizbattle.model.entity.RoomEntity;
 import com.quizbattle.model.entity.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -17,6 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class GameService {
+    
+    private static final Logger log = LoggerFactory.getLogger(GameService.class);
     
     private final Map<String, Room> rooms = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
@@ -41,12 +46,17 @@ public class GameService {
     };
     
     /**
-     * Создать новую комнату (сохраняет в БД и создает игровую сессию)
+     * Создать новую комнату или вернуть существующую (сохраняет в БД и создает игровую сессию)
      * Автоматически загружает всех пользователей из БД как игроков
      * Только администратор может создавать комнаты
+     * При переподключении админа возвращает его существующую комнату (если forceNew = false)
+     * 
+     * @param hostUserId ID администратора
+     * @param hostSessionId ID сессии WebSocket
+     * @param forceNew если true, всегда создает новую комнату, игнорируя существующую
      */
     @Transactional
-    public Room createRoom(Long hostUserId, String hostSessionId) {
+    public Room createRoom(Long hostUserId, String hostSessionId, boolean forceNew) {
         User hostUser = userService.getUserById(hostUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
         
@@ -55,6 +65,34 @@ public class GameService {
             throw new IllegalArgumentException("Только администратор может создавать комнаты");
         }
         
+        // Если forceNew = false, проверяем существующую комнату
+        if (!forceNew) {
+            Optional<RoomEntity> existingRoomEntity = userService.getLatestRoomByHostUserId(hostUserId);
+            
+            if (existingRoomEntity.isPresent()) {
+                RoomEntity roomEntity = existingRoomEntity.get();
+                String code = roomEntity.getCode();
+                
+                // Проверяем, активна ли комната в памяти
+                Room existingRoom = rooms.get(code.toUpperCase());
+                
+                if (existingRoom != null) {
+                    // Комната уже активна - просто обновляем hostSessionId
+                    existingRoom.setHostSessionId(hostSessionId);
+                    log.info("Reconnected to existing room: {} by userId: {}, session: {}", code, hostUserId, hostSessionId);
+                    return existingRoom;
+                } else {
+                    // Комната есть в БД, но не активна в памяти - активируем её
+                    Room room = new Room(code, hostSessionId);
+                    loadAllUsersAsPlayers(room);
+                    rooms.put(code.toUpperCase(), room);
+                    log.info("Reactivated room from database: {} by userId: {}, session: {}", code, hostUserId, hostSessionId);
+                    return room;
+                }
+            }
+        }
+        
+        // Комнаты нет или forceNew = true - создаем новую
         String code = generateRoomCode();
         
         // Создаем RoomEntity и сохраняем в БД
@@ -68,7 +106,16 @@ public class GameService {
         loadAllUsersAsPlayers(room);
         
         rooms.put(code, room);
+        log.info("Created new room: {} by userId: {}, session: {}, forceNew: {}", code, hostUserId, hostSessionId, forceNew);
         return room;
+    }
+    
+    /**
+     * Создать новую комнату или вернуть существующую (без forceNew, для обратной совместимости)
+     */
+    @Transactional
+    public Room createRoom(Long hostUserId, String hostSessionId) {
+        return createRoom(hostUserId, hostSessionId, false);
     }
     
     /**

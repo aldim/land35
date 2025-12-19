@@ -92,6 +92,10 @@ function HostPage() {
       return;
     }
     
+    // Проверяем параметр URL для принудительного создания новой комнаты
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceNew = urlParams.get('new') === 'true';
+    
     const connect = async () => {
       try {
         await websocketService.connect();
@@ -106,9 +110,9 @@ function HostPage() {
         // Небольшая задержка чтобы подписка успела установиться
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Создаём комнату с userId
-        console.log('Creating room...');
-        websocketService.createRoom(userId);
+        // Создаём комнату с userId (forceNew если указан в URL)
+        console.log('Creating room...', { forceNew });
+        websocketService.createRoom(userId, forceNew);
       } catch (err) {
         console.error('Connection error:', err);
         setError('Не удалось подключиться к серверу');

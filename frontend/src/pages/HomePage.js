@@ -47,14 +47,22 @@ function HomePage() {
           </div>
         </div>
         
-        <div className="flex gap-3 mt-4">
+        <div className="flex flex-col gap-3 mt-4" style={{ width: '100%', maxWidth: '400px' }}>
           {isAdmin && (
-            <button 
-              className="btn btn-primary"
-              onClick={() => navigate('/host')}
-            >
-              🎮 Создать игру
-            </button>
+            <>
+              <button 
+                className="btn btn-primary"
+                onClick={() => navigate('/host')}
+              >
+                🎮 Продолжить игру
+              </button>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => navigate('/host?new=true')}
+              >
+                ➕ Создать новую комнату
+              </button>
+            </>
           )}
           {!isAdmin && (
             <button 
