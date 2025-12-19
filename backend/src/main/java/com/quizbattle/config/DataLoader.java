@@ -2,7 +2,10 @@ package com.quizbattle.config;
 
 import com.quizbattle.model.entity.User;
 import com.quizbattle.model.entity.UserRole;
+import com.quizbattle.model.entity.RoomEntity;
 import com.quizbattle.repository.UserRepository;
+import com.quizbattle.repository.RoomRepository;
+import com.quizbattle.repository.RoomInvitationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -12,12 +15,19 @@ import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 @Component
 public class DataLoader {
     
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private RoomRepository roomRepository;
+    
+    @Autowired
+    private RoomInvitationRepository roomInvitationRepository;
     
     // Маппинг имен файлов на полные имена
     private static final Map<String, String> FULL_NAMES = new HashMap<>();
@@ -82,8 +92,22 @@ public class DataLoader {
             var master35User = userRepository.findByUsername(username);
             
             if (master35User.isPresent()) {
-                userRepository.delete(master35User.get());
-                System.out.println("Пользователь " + username + " удален");
+                User user = master35User.get();
+                
+                // Находим все комнаты, созданные master35
+                List<RoomEntity> rooms = roomRepository.findByHostUser(user);
+                
+                // Удаляем все приглашения для этих комнат
+                for (RoomEntity room : rooms) {
+                    roomInvitationRepository.deleteAll(roomInvitationRepository.findByRoom(room));
+                }
+                
+                // Удаляем все комнаты
+                roomRepository.deleteAll(rooms);
+                
+                // Теперь можно удалить пользователя
+                userRepository.delete(user);
+                System.out.println("Пользователь " + username + " и все связанные данные удалены");
             }
         } catch (Exception e) {
             System.err.println("Ошибка при удалении пользователя master35: " + e.getMessage());
