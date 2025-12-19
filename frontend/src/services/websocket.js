@@ -150,6 +150,10 @@ class WebSocketService {
     this.send('/app/get-room-state', { roomCode });
   }
 
+  stunPlayer(roomCode, playerId) {
+    this.send('/app/stun-player', { roomCode, playerId });
+  }
+
   onConnect(callback) {
     this.onConnectCallbacks.push(callback);
   }

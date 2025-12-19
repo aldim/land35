@@ -11,6 +11,7 @@ function HostPage() {
   const [gameState, setGameState] = useState('WAITING');
   const [winner, setWinner] = useState(null);
   const [error, setError] = useState(null);
+  const [openMenuPlayerId, setOpenMenuPlayerId] = useState(null);
 
   const handleMessage = useCallback((message) => {
     console.log('Received message:', message);
@@ -139,6 +140,49 @@ function HostPage() {
     websocketService.resetRound(roomCode);
   };
 
+  const handleStunPlayer = (playerId) => {
+    console.log('handleStunPlayer called:', { roomCode, playerId });
+    if (roomCode) {
+      console.log('Calling websocketService.stunPlayer');
+      websocketService.stunPlayer(roomCode, playerId);
+      setOpenMenuPlayerId(null); // Закрываем меню после действия
+    } else {
+      console.error('No roomCode available');
+    }
+  };
+
+  const handleAvatarClick = (e, playerId) => {
+    e.stopPropagation();
+    // Открываем меню для этого игрока (переключаем)
+    setOpenMenuPlayerId(openMenuPlayerId === playerId ? null : playerId);
+  };
+
+  // Закрываем меню при клике вне его
+  useEffect(() => {
+    if (!openMenuPlayerId) return;
+    
+    const handleClickOutside = (event) => {
+      // Проверяем, был ли клик на меню или на аватар
+      const clickedMenu = event.target.closest('.player-action-menu');
+      const clickedAvatar = event.target.closest('.player-avatar-wrapper');
+      
+      // Закрываем меню только если клик был вне меню и не на аватаре
+      if (!clickedMenu && !clickedAvatar) {
+        setOpenMenuPlayerId(null);
+      }
+    };
+    
+    // Используем небольшую задержку, чтобы клик на кнопку успел обработаться
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 10);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMenuPlayerId]);
+
   // Группируем игроков по командам
   const groupPlayersByTeam = () => {
     const teams = {};
@@ -264,21 +308,111 @@ function HostPage() {
                 <div key={id} className={`team-corner ${cornerClass}`}>
                   <h3 className="team-name">{teamNames[id] || `Команда ${id}`}</h3>
                   <div className="team-players">
-                    {teamPlayers.map(player => (
-                      <div 
-                        key={player.id} 
-                        className="player-avatar-wrapper"
-                        style={{
-                          border: `4px solid ${player.connected ? '#00ff88' : '#888'}`,
-                          borderRadius: '50%',
-                          padding: '4px',
-                          display: 'inline-block',
-                          margin: '0.75rem'
-                        }}
-                      >
-                        <AvatarDisplay avatar={player.avatar} size="6rem" />
-                      </div>
-                    ))}
+                    {teamPlayers.map(player => {
+                      // Определяем цвет рамки: темно-фиолетовый для оглушенных, зеленый для подключенных, серый для отключенных
+                      let borderColor = '#888'; // По умолчанию серый (не подключен)
+                      if (player.stunned) {
+                        borderColor = '#6a0dad'; // Темно-фиолетовый для оглушенных
+                      } else if (player.connected) {
+                        borderColor = '#00ff88'; // Зеленый для подключенных
+                      }
+                      
+                      return (
+                        <div 
+                          key={player.id}
+                          style={{ position: 'relative', display: 'inline-block' }}
+                        >
+                          <div 
+                            className="player-avatar-wrapper"
+                            style={{
+                              border: `4px solid ${borderColor}`,
+                              borderRadius: '50%',
+                              padding: '4px',
+                              display: 'inline-block',
+                              margin: '0.75rem',
+                              cursor: 'pointer',
+                              transition: 'transform 0.2s',
+                              touchAction: 'manipulation' // Для лучшей работы на мобильных
+                            }}
+                            onClick={(e) => handleAvatarClick(e, player.id)}
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              handleAvatarClick(e, player.id);
+                            }}
+                            title="Кликните для действий"
+                          >
+                            <AvatarDisplay avatar={player.avatar} size="6rem" />
+                          </div>
+                          
+                          {/* Всплывающее меню */}
+                          {openMenuPlayerId === player.id && (
+                            <div 
+                              className="player-action-menu"
+                              style={{
+                                position: 'absolute',
+                                left: 'calc(100% + 10px)',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                zIndex: 10000,
+                                background: 'var(--card-bg)',
+                                border: '1px solid var(--card-border)',
+                                borderRadius: '8px',
+                                padding: '0.5rem 0',
+                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                                minWidth: '150px',
+                                touchAction: 'manipulation',
+                                whiteSpace: 'nowrap'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                              onTouchEnd={(e) => {
+                                e.stopPropagation();
+                              }}
+                            >
+                              <button
+                                className="menu-item"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  console.log('Stun player clicked:', player.id, player.stunned);
+                                  if (!player.stunned) {
+                                    handleStunPlayer(player.id);
+                                  }
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.stopPropagation();
+                                  if (!player.stunned) {
+                                    handleStunPlayer(player.id);
+                                  }
+                                }}
+                                style={{
+                                  width: '100%',
+                                  padding: '0.75rem 1rem',
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: player.stunned ? 'var(--text-muted)' : 'var(--text)',
+                                  cursor: player.stunned ? 'not-allowed' : 'pointer',
+                                  textAlign: 'left',
+                                  fontSize: '1rem',
+                                  transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!player.stunned) {
+                                    e.target.style.background = 'rgba(106, 13, 173, 0.2)';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.style.background = 'transparent';
+                                }}
+                                disabled={player.stunned}
+                              >
+                                {player.stunned ? '✓ Оглушен' : '⚡ Оглушить'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );

@@ -117,6 +117,10 @@ public class Room {
         this.roundStartTime = null;
         this.buttonPresses.clear();
         this.firstPressServerTime = 0;
+        // Снимаем оглушение со всех игроков после завершения раунда
+        for (Player player : players) {
+            player.setStunned(false);
+        }
         // Отменяем задачу определения победителя
         if (this.winnerDeterminationTask != null && !this.winnerDeterminationTask.isDone()) {
             this.winnerDeterminationTask.cancel(false);

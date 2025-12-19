@@ -232,6 +232,11 @@ public class GameService {
             return null;
         }
         
+        // Проверяем, не оглушен ли игрок
+        if (player.isStunned()) {
+            return null; // Оглушенный игрок не может нажимать кнопку
+        }
+        
         // Регистрируем нажатие
         boolean isFirstPress = room.registerButtonPress(playerId, clientTimestamp);
         
@@ -291,6 +296,25 @@ public class GameService {
         }
         
         room.resetRound();
+        return true;
+    }
+    
+    /**
+     * Оглушить игрока (админ может заблокировать кнопку игрока на один раунд)
+     */
+    public boolean stunPlayer(String roomCode, String playerId, String hostSessionId) {
+        Room room = getRoom(roomCode);
+        if (room == null || !room.getHostSessionId().equals(hostSessionId)) {
+            return false; // Только хост может оглушать игроков
+        }
+        
+        Player player = room.getPlayerById(playerId);
+        if (player == null) {
+            return false;
+        }
+        
+        // Оглушаем игрока (действует до конца текущего/следующего раунда)
+        player.setStunned(true);
         return true;
     }
     

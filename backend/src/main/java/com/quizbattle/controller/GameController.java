@@ -257,6 +257,36 @@ public class GameController {
         );
     }
     
+    /**
+     * Оглушить игрока (админ может заблокировать кнопку игрока на один раунд)
+     */
+    @MessageMapping("/stun-player")
+    public void stunPlayer(@Payload Map<String, String> payload, Principal principal) {
+        String sessionId = principal.getName();
+        String roomCode = payload.get("roomCode");
+        String playerId = payload.get("playerId");
+        
+        if (!gameService.isHost(roomCode, sessionId)) {
+            sendError(sessionId, "Только хост комнаты может оглушать игроков");
+            return;
+        }
+        
+        boolean success = gameService.stunPlayer(roomCode, playerId, sessionId);
+        if (!success) {
+            sendError(sessionId, "Не удалось оглушить игрока");
+            return;
+        }
+        
+        Room room = gameService.getRoom(roomCode);
+        log.info("Player stunned: {} in room: {}", playerId, roomCode);
+        
+        // Отправляем обновленное состояние комнаты всем участникам
+        messagingTemplate.convertAndSend(
+            "/topic/room/" + roomCode,
+            GameMessage.roomState(room)
+        );
+    }
+    
     private void sendError(String sessionId, String message) {
         messagingTemplate.convertAndSendToUser(
             sessionId,

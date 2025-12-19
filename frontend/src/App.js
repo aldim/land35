@@ -5,6 +5,7 @@ import HostPage from './pages/HostPage';
 import PlayerPage from './pages/PlayerPage';
 import LoginPage from './pages/LoginPage';
 import JoinRoomPage from './pages/JoinRoomPage';
+import ScreenPage from './pages/ScreenPage';
 import './App.css';
 
 // Компонент для редиректа на логин
@@ -31,6 +32,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/play/:roomCode/:playerId" element={<PlayerPage />} />
+          <Route path="/screen/:roomCode" element={<ScreenPage />} />
           <Route path="/" element={
             <ProtectedRoute>
               <HomePage />

@@ -12,6 +12,7 @@ function PlayerPage() {
   const [hasPressed, setHasPressed] = useState(false);
   const [error, setError] = useState(null);
   const [winnerId, setWinnerId] = useState(null);
+  const [isStunned, setIsStunned] = useState(false);
 
   const handleMessage = useCallback((message) => {
     console.log('Player received message:', message);
@@ -28,6 +29,7 @@ function PlayerPage() {
         const me = message.players?.find(p => p.id === playerId);
         if (me) {
           setPlayer(me);
+          setIsStunned(me.stunned === true);
         }
         break;
       case 'PLAYER_JOINED':
@@ -35,6 +37,7 @@ function PlayerPage() {
         const player = message.players?.find(p => p.id === playerId);
         if (player) {
           setPlayer(player);
+          setIsStunned(player.stunned === true);
         }
         break;
       case 'ROUND_STARTED':
@@ -42,6 +45,11 @@ function PlayerPage() {
         setIsWinner(false);
         setHasPressed(false);
         setWinnerId(null);
+        // Проверяем состояние оглушения
+        const meStarted = message.players?.find(p => p.id === playerId);
+        if (meStarted) {
+          setIsStunned(meStarted.stunned === true);
+        }
         break;
       case 'BUTTON_PRESSED':
         setGameState(message.gameState);
@@ -53,6 +61,11 @@ function PlayerPage() {
         const myPress = message.buttonPresses?.find(p => p.playerId === playerId);
         if (myPress) {
           setHasPressed(true);
+        }
+        // Обновляем состояние оглушения
+        const mePressed = message.players?.find(p => p.id === playerId);
+        if (mePressed) {
+          setIsStunned(mePressed.stunned === true);
         }
         break;
       case 'ROUND_ENDED':
@@ -66,12 +79,19 @@ function PlayerPage() {
         if (myPressEnded) {
           setHasPressed(true);
         }
+        // Обновляем состояние оглушения
+        const meEnded = message.players?.find(p => p.id === playerId);
+        if (meEnded) {
+          setIsStunned(meEnded.stunned === true);
+        }
         break;
       case 'ROUND_RESET':
         setGameState('WAITING');
         setIsWinner(false);
         setHasPressed(false);
         setWinnerId(null);
+        // Оглушение снимается после сброса раунда
+        setIsStunned(false);
         break;
       case 'ERROR':
         setError(message.error);
@@ -109,7 +129,7 @@ function PlayerPage() {
   }, [roomCode, playerId, handleMessage]);
 
   const handlePressButton = () => {
-    if (gameState !== 'ACTIVE' || hasPressed) return;
+    if (gameState !== 'ACTIVE' || hasPressed || isStunned) return;
     
     // Вибрация на мобильных устройствах
     if (navigator.vibrate) {
@@ -122,6 +142,7 @@ function PlayerPage() {
 
   const getButtonState = () => {
     if (gameState === 'WAITING') return 'waiting';
+    if (isStunned && gameState === 'ACTIVE') return 'stunned'; // Оглушенное состояние
     if (gameState === 'ACTIVE' && !hasPressed) return 'active';
     if (isWinner) return 'winner';
     if (hasPressed || winnerId) return 'loser';
@@ -132,6 +153,7 @@ function PlayerPage() {
     const state = getButtonState();
     switch (state) {
       case 'waiting': return 'Ожидайте...';
+      case 'stunned': return 'Оглушен';
       case 'active': return 'Жми!';
       case 'winner': return '🎉 Первый!';
       case 'loser': return hasPressed ? 'Не успел...' : 'Поздно!';
@@ -190,7 +212,7 @@ function PlayerPage() {
         <button 
           className={`big-button ${getButtonState()}`}
           onClick={handlePressButton}
-          disabled={gameState !== 'ACTIVE' || hasPressed}
+          disabled={gameState !== 'ACTIVE' || hasPressed || isStunned}
         >
           {getButtonText()}
         </button>

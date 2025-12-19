@@ -7,6 +7,7 @@ public class Player {
     private String sessionId;
     private boolean connected;
     private Integer teamId; // Номер команды (1-4)
+    private boolean stunned; // Оглушен ли игрок (не может нажимать кнопку в текущем раунде)
     
     public Player() {}
     
@@ -50,4 +51,7 @@ public class Player {
     
     public Integer getTeamId() { return teamId; }
     public void setTeamId(Integer teamId) { this.teamId = teamId; }
+    
+    public boolean isStunned() { return stunned; }
+    public void setStunned(boolean stunned) { this.stunned = stunned; }
 }
