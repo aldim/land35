@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AvatarDisplay from '../components/AvatarDisplay';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
@@ -203,8 +204,8 @@ function LoginPage() {
                     gap: '0.5rem'
                   }}
                 >
-                  <div style={{ fontSize: '2.5rem' }}>
-                    {user.avatar || '👤'}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <AvatarDisplay avatar={user.avatar} />
                   </div>
                   <div style={{ 
                     fontSize: '0.9rem', 

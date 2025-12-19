@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AvatarDisplay from '../components/AvatarDisplay';
 
 function JoinRoomPage() {
   const navigate = useNavigate();
@@ -61,9 +62,7 @@ function JoinRoomPage() {
         
         <div className="card mb-3" style={{ maxWidth: '400px', width: '100%' }}>
           <div className="flex items-center gap-2 mb-3">
-            <span style={{ fontSize: '2rem' }}>
-              {localStorage.getItem('userAvatar') || '👤'}
-            </span>
+            <AvatarDisplay avatar={localStorage.getItem('userAvatar')} size="2rem" />
             <div>
               <div style={{ fontWeight: '600' }}>{userName}</div>
               <button

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import AvatarDisplay from '../components/AvatarDisplay';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -24,9 +25,7 @@ function HomePage() {
         
         <div className="card mb-3" style={{ maxWidth: '400px', width: '100%' }}>
           <div className="flex items-center gap-2">
-            <span style={{ fontSize: '2rem' }}>
-              {localStorage.getItem('userAvatar') || '👤'}
-            </span>
+            <AvatarDisplay avatar={localStorage.getItem('userAvatar')} size="2rem" />
             <div>
               <div style={{ fontWeight: '600' }}>
                 {localStorage.getItem('userNickname') || localStorage.getItem('userFullName')}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import websocketService from '../services/websocket';
+import AvatarDisplay from '../components/AvatarDisplay';
 
 function PlayerPage() {
   const { roomCode, playerId } = useParams();
@@ -166,7 +167,7 @@ function PlayerPage() {
       <div className="flex items-center justify-between mb-2">
         {player && (
           <div className="flex items-center gap-2">
-            <span style={{ fontSize: '2rem' }}>{player.avatar}</span>
+            <AvatarDisplay avatar={player.avatar} size="2rem" />
             <span style={{ fontWeight: '700' }}>{player.name}</span>
           </div>
         )}

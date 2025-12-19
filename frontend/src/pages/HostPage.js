@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import websocketService from '../services/websocket';
+import AvatarDisplay from '../components/AvatarDisplay';
 
 function HostPage() {
   const navigate = useNavigate();
@@ -190,7 +191,9 @@ function HostPage() {
       {winner && gameState === 'ROUND_ENDED' && (
         <div className="winner-display card mb-4">
           <div className="winner-label">🎉 Первый нажал!</div>
-          <div className="winner-avatar">{winner.avatar}</div>
+          <div className="winner-avatar">
+            <AvatarDisplay avatar={winner.avatar} size="8rem" />
+          </div>
           <div className="winner-name">{winner.name}</div>
         </div>
       )}
@@ -236,7 +239,9 @@ function HostPage() {
           <div className="players-list">
             {players.map(player => (
               <div key={player.id} className="player-card">
-                <div className="player-avatar">{player.avatar}</div>
+                <div className="player-avatar">
+                  <AvatarDisplay avatar={player.avatar} size="2.5rem" />
+                </div>
                 <div>
                   <div className="player-name">{player.name}</div>
                   <div className={`player-status ${player.connected ? 'connected' : ''}`}>
