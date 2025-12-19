@@ -246,24 +246,24 @@ function HostPage() {
 
       {/* Room Code Display */}
       {roomCode && (
-        <div className="text-center mb-4">
-          <p className="mb-1" style={{ color: 'var(--text-muted)' }}>Код комнаты:</p>
+        <div className="text-center mb-2">
+          <p className="mb-1" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Код комнаты:</p>
           <div className="room-code">{roomCode}</div>
         </div>
       )}
 
       {/* Winner Display */}
       {winner && gameState === 'ROUND_ENDED' && (
-        <div className="winner-display card mb-4">
+        <div className="winner-display card mb-2">
           <div className="winner-avatar">
-            <AvatarDisplay avatar={winner.avatar} size="16rem" />
+            <AvatarDisplay avatar={winner.avatar} size="12rem" />
           </div>
           <div className="winner-name">{winner.name}</div>
         </div>
       )}
 
       {/* Game State */}
-      <div className="text-center mb-4">
+      <div className="text-center mb-2">
         <span className={`game-state ${gameState.toLowerCase()}`}>
           {gameState === 'WAITING' && '⏳ Ожидание'}
           {gameState === 'ACTIVE' && '🔥 Раунд активен!'}
@@ -272,7 +272,7 @@ function HostPage() {
       </div>
 
       {/* Control Panel */}
-      <div className="control-panel mb-4">
+      <div className="control-panel mb-2">
         <button 
           className="btn btn-primary"
           onClick={handleStartRound}
@@ -291,7 +291,7 @@ function HostPage() {
 
       {/* Players List by Teams */}
       <div className="card">
-        <h2 className="mb-3">Игроки ({players.length}/20)</h2>
+        <h2 className="mb-2" style={{ fontSize: '1.3rem' }}>Игроки ({players.length}/20)</h2>
         
         {players.length === 0 ? (
           <div className="empty-state">
@@ -310,7 +310,7 @@ function HostPage() {
               
               return (
                 <div key={id} className={`team-corner ${cornerClass}`}>
-                  <h3 className="team-name">{teamNames[id] || `Команда ${id}`}</h3>
+                  <h3 className="team-name" style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>{teamNames[id] || `Команда ${id}`}</h3>
                   <div className="team-players">
                     {teamPlayers.map(player => {
                       // Определяем цвет рамки: темно-фиолетовый для оглушенных, зеленый для подключенных, серый для отключенных
@@ -329,11 +329,11 @@ function HostPage() {
                           <div 
                             className="player-avatar-wrapper"
                             style={{
-                              border: `4px solid ${borderColor}`,
+                              border: `3px solid ${borderColor}`,
                               borderRadius: '50%',
-                              padding: '4px',
+                              padding: '2px',
                               display: 'inline-block',
-                              margin: '0.75rem',
+                              margin: '0.4rem',
                               cursor: 'pointer',
                               transition: 'transform 0.2s',
                               touchAction: 'manipulation' // Для лучшей работы на мобильных
@@ -345,7 +345,7 @@ function HostPage() {
                             }}
                             title="Кликните для действий"
                           >
-                            <AvatarDisplay avatar={player.avatar} size="6rem" />
+                            <AvatarDisplay avatar={player.avatar} size="4rem" />
                           </div>
                           
                           {/* Всплывающее меню */}
