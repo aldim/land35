@@ -45,11 +45,14 @@ public class DataLoader {
     @PostConstruct
     public void loadUsers() {
         try {
+            // Удаляем пользователя master35, если он существует
+            removeMaster35User();
+            
             // Обновляем существующих пользователей - устанавливаем роль PLAYER если не установлена
             updateExistingUsersRoles();
             
-            // Создаем администратора master35
-            createAdminUser();
+            // Устанавливаем alex как администратора
+            setAlexAsAdmin();
             
             // Используем PathMatchingResourcePatternResolver для работы с ресурсами в JAR
             PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
@@ -73,6 +76,21 @@ public class DataLoader {
         }
     }
     
+    private void removeMaster35User() {
+        try {
+            String username = "master35";
+            var master35User = userRepository.findByUsername(username);
+            
+            if (master35User.isPresent()) {
+                userRepository.delete(master35User.get());
+                System.out.println("Пользователь " + username + " удален");
+            }
+        } catch (Exception e) {
+            System.err.println("Ошибка при удалении пользователя master35: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
     private void updateExistingUsersRoles() {
         try {
             var allUsers = userRepository.findAll();
@@ -88,31 +106,25 @@ public class DataLoader {
         }
     }
     
-    private void createAdminUser() {
+    private void setAlexAsAdmin() {
         try {
-            String username = "master35";
+            String username = "alex";
             
-            // Проверяем, существует ли уже администратор
-            if (userRepository.existsByUsername(username)) {
-                System.out.println("Администратор " + username + " уже существует, пропускаем");
-                return;
+            // Ищем пользователя alex
+            var alexUser = userRepository.findByUsername(username);
+            
+            if (alexUser.isPresent()) {
+                // Обновляем существующего пользователя
+                User user = alexUser.get();
+                user.setRole(UserRole.ADMIN);
+                userRepository.save(user);
+                System.out.println("Пользователь " + username + " установлен как администратор");
+            } else {
+                System.out.println("Пользователь " + username + " не найден, будет создан при загрузке аватаров");
             }
             
-            // Создаем администратора
-            User admin = new User(
-                username,
-                "password123", // Стандартный пароль
-                "Master 35",
-                "master35",
-                "👑", // Аватар для админа
-                UserRole.ADMIN
-            );
-            
-            userRepository.save(admin);
-            System.out.println("Создан администратор: " + username);
-            
         } catch (Exception e) {
-            System.err.println("Ошибка при создании администратора: " + e.getMessage());
+            System.err.println("Ошибка при установке администратора: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -139,18 +151,22 @@ public class DataLoader {
             // Формируем путь к аватару (относительный путь для использования в приложении)
             String avatarPathStr = "/avatars/" + fileName;
             
-            // Создаем пользователя (игрок)
+            // Определяем роль: alex - ADMIN, остальные - PLAYER
+            UserRole role = "alex".equals(username) ? UserRole.ADMIN : UserRole.PLAYER;
+            
+            // Создаем пользователя
             User user = new User(
                 username,
                 "password123", // Стандартный пароль для тестовых пользователей
                 fullName,
                 username, // nickname = username
                 avatarPathStr,
-                UserRole.PLAYER // Все игроки имеют роль PLAYER
+                role
             );
             
             userRepository.save(user);
-            System.out.println("Создан пользователь: " + username + " (" + fullName + ")");
+            String roleText = role == UserRole.ADMIN ? " (ADMIN)" : "";
+            System.out.println("Создан пользователь: " + username + " (" + fullName + ")" + roleText);
             
         } catch (Exception e) {
             System.err.println("Ошибка при создании пользователя из ресурса " + resource.getFilename() + ": " + e.getMessage());
